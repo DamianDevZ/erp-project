@@ -4,6 +4,7 @@
 
 export type AssetType = 'vehicle' | 'equipment' | 'other';
 export type AssetOwnership = 'company_owned' | 'employee_owned' | 'rental';
+export type AssetCategory = 'vehicle' | 'helmet' | 'uniform' | 'phone' | 'bag' | 'accessory' | 'other';
 
 /**
  * Asset entity.
@@ -11,8 +12,10 @@ export type AssetOwnership = 'company_owned' | 'employee_owned' | 'rental';
 export interface Asset {
   id: string;
   organization_id: string;
+  asset_number: string | null;
   name: string;
   type: AssetType;
+  category: AssetCategory;
   ownership: AssetOwnership;
   license_plate: string | null;
   make: string | null;

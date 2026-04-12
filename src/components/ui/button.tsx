@@ -51,7 +51,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       default: 'bg-primary text-white hover:bg-primary-hover',
       destructive: 'bg-error text-white hover:opacity-90',
       outline: 'border border-border bg-transparent text-heading hover:bg-hover',
-      ghost: 'text-body hover:bg-hover hover:text-heading',
+      ghost: 'text-primary hover:bg-primary/10 hover:text-primary-hover',
       link: 'text-primary underline-offset-4 hover:underline',
     };
 

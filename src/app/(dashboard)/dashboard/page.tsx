@@ -1,16 +1,27 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
+import { createClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 /**
  * Dashboard home page.
  * Shows overview stats and quick actions.
  */
-export default function DashboardPage() {
-  // TODO: Fetch real stats from database
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  // Fetch counts in parallel
+  const [employeesRes, assetsRes, platformsRes, invoicesRes] = await Promise.all([
+    supabase.from('employees').select('*', { count: 'exact', head: true }),
+    supabase.from('assets').select('*', { count: 'exact', head: true }),
+    supabase.from('platforms').select('*', { count: 'exact', head: true }),
+    supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+  ]);
+
   const stats = [
-    { label: 'Total Employees', value: '0', change: null },
-    { label: 'Active Riders', value: '0', change: null },
-    { label: 'Assets', value: '0', change: null },
-    { label: 'Pending Invoices', value: '0', change: null },
+    { label: 'Total Employees', value: employeesRes.count?.toString() || '0' },
+    { label: 'Assets', value: assetsRes.count?.toString() || '0' },
+    { label: 'Platforms', value: platformsRes.count?.toString() || '0' },
+    { label: 'Pending Invoices', value: invoicesRes.count?.toString() || '0' },
   ];
 
   return (
@@ -65,7 +76,7 @@ export default function DashboardPage() {
 
 function QuickAction({ href, label }: { href: string; label: string }) {
   return (
-    <a
+    <Link
       href={href}
       className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium text-body transition-colors hover:bg-hover"
     >
@@ -73,6 +84,6 @@ function QuickAction({ href, label }: { href: string; label: string }) {
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
-    </a>
+    </Link>
   );
 }

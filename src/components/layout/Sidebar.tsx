@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 /**
@@ -15,27 +16,44 @@ const navigation = [
   { name: 'Invoices', href: '/dashboard/invoices', icon: DocumentIcon },
 ];
 
+interface SidebarProps {
+  organizationName?: string;
+  organizationLogo?: string | null;
+}
+
 /**
  * Sidebar navigation component.
  * Displays the main navigation for the dashboard.
  */
-export function Sidebar() {
+export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <aside className="flex h-full w-64 flex-col border-r border-border bg-card">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold">
-          E
-        </div>
-        <span className="text-lg font-semibold text-heading">ERP</span>
+      <div className="flex h-24 items-center justify-start border-b border-border p-4">
+        {organizationLogo ? (
+          <Image
+            src={organizationLogo}
+            alt={organizationName || 'Logo'}
+            width={160}
+            height={64}
+            className="max-h-16 w-auto max-w-full object-contain"
+          />
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-white font-bold text-xl">
+            {organizationName?.charAt(0).toUpperCase() || 'E'}
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          // Dashboard should only be active when exactly at /dashboard
+          const isActive = item.href === '/dashboard' 
+            ? pathname === '/dashboard'
+            : pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link
               key={item.name}

@@ -31,7 +31,7 @@ export default async function DashboardLayout({
       full_name,
       is_super_admin,
       organization_id,
-      organization:organizations(name)
+      organization:organizations(name, logo_url)
     `)
     .eq('id', user.id)
     .single();
@@ -42,12 +42,16 @@ export default async function DashboardLayout({
   }
 
   const userName = profile?.full_name || user.email || 'User';
-  const organizationName = (profile?.organization as any)?.name || 'No Organization';
+  // Supabase returns joined data as array, access first element
+  const orgData = profile?.organization;
+  const organization = Array.isArray(orgData) ? orgData[0] : orgData;
+  const organizationName = organization?.name || 'No Organization';
+  const organizationLogo = organization?.logo_url || null;
 
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar organizationName={organizationName} organizationLogo={organizationLogo} />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">

@@ -1,36 +1,36 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { EmployeeForm } from '../../EmployeeForm';
+import { AssetForm } from '../../AssetForm';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Edit employee page.
+ * Edit asset page.
  */
-export default async function EditEmployeePage({ params }: Props) {
+export default async function EditAssetPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: employee, error } = await supabase
-    .from('employees')
+  const { data: asset, error } = await supabase
+    .from('assets')
     .select('*')
     .eq('id', id)
     .single();
 
-  if (error || !employee) {
+  if (error || !asset) {
     notFound();
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-heading">Edit Employee</h1>
-        <p className="text-muted">Update employee information.</p>
+        <h1 className="text-2xl font-bold text-heading">Edit Asset</h1>
+        <p className="text-muted">Update asset information.</p>
       </div>
 
-      <EmployeeForm employee={employee} />
+      <AssetForm asset={asset} />
     </div>
   );
 }

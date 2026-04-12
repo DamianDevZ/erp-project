@@ -21,6 +21,7 @@ export interface Employee {
   status: EmployeeStatus;
   hire_date: string | null;
   termination_date: string | null;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 }

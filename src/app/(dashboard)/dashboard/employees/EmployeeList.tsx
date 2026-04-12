@@ -128,8 +128,10 @@ export function EmployeeList() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Hire Date</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -138,11 +140,15 @@ export function EmployeeList() {
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">{employee.full_name}</TableCell>
                   <TableCell>{employee.email || '—'}</TableCell>
+                  <TableCell>{employee.phone || '—'}</TableCell>
                   <TableCell>
                     <EmployeeRoleBadge role={employee.role} />
                   </TableCell>
                   <TableCell>
                     <EmployeeStatusBadge status={employee.status} />
+                  </TableCell>
+                  <TableCell className="text-muted">
+                    {employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : '—'}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">

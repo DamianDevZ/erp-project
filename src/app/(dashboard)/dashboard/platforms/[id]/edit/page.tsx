@@ -1,36 +1,36 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { EmployeeForm } from '../../EmployeeForm';
+import { PlatformForm } from '../../PlatformForm';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Edit employee page.
+ * Edit platform page.
  */
-export default async function EditEmployeePage({ params }: Props) {
+export default async function EditPlatformPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: employee, error } = await supabase
-    .from('employees')
+  const { data: platform, error } = await supabase
+    .from('platforms')
     .select('*')
     .eq('id', id)
     .single();
 
-  if (error || !employee) {
+  if (error || !platform) {
     notFound();
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-heading">Edit Employee</h1>
-        <p className="text-muted">Update employee information.</p>
+        <h1 className="text-2xl font-bold text-heading">Edit Platform</h1>
+        <p className="text-muted">Update platform information.</p>
       </div>
 
-      <EmployeeForm employee={employee} />
+      <PlatformForm platform={platform} />
     </div>
   );
 }
