@@ -3,8 +3,8 @@ import { Button } from '@/components/ui';
 import { PlatformList } from './PlatformList';
 
 /**
- * Platforms list page.
- * Shows all delivery platforms with actions.
+ * Clients list page.
+ * Shows all clients with actions.
  */
 export default function PlatformsPage() {
   return (
@@ -12,15 +12,15 @@ export default function PlatformsPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-heading">Platforms</h1>
-          <p className="text-muted">Manage delivery platforms and billing rates.</p>
+          <h1 className="text-2xl font-bold text-heading">Clients</h1>
+          <p className="text-muted">Manage clients and billing rates.</p>
         </div>
         <Link href="/dashboard/platforms/new">
-          <Button>Add Platform</Button>
+          <Button>Add Client</Button>
         </Link>
       </div>
 
-      {/* Platform list */}
+      {/* Client list */}
       <PlatformList />
     </div>
   );

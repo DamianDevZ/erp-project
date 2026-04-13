@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { RoleSwitcher } from '@/components/dev/RoleSwitcher';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,9 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Dev role switcher - only in development */}
+      {process.env.NODE_ENV === 'development' && <RoleSwitcher />}
     </div>
   );
 }

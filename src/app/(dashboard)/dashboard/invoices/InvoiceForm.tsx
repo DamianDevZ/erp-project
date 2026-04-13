@@ -383,11 +383,11 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
             {/* Platform */}
             <div className="space-y-2">
-              <Label htmlFor="platformId" required>Platform / Client</Label>
+              <Label htmlFor="platformId" required>Client</Label>
               {loadingPlatforms ? (
                 <div className="flex items-center gap-2 py-2">
                   <Spinner size="sm" />
-                  <span className="text-sm text-muted">Loading platforms...</span>
+                  <span className="text-sm text-muted">Loading clients...</span>
                 </div>
               ) : (
                 <select
@@ -397,7 +397,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   required
                 >
-                  <option value="">Select platform...</option>
+                  <option value="">Select client...</option>
                   {platforms.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}

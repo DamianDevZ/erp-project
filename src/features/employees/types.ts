@@ -8,6 +8,9 @@ export type EmployeeStatus = 'pending' | 'active' | 'past';
 /** Employee role — what they do in the field */
 export type EmployeeRole = 'rider' | 'supervisor' | 'manager' | 'hr';
 
+/** Salary payment type */
+export type SalaryType = 'hourly' | 'daily' | 'weekly' | 'monthly';
+
 /**
  * Employee entity as stored in the database.
  */
@@ -23,6 +26,28 @@ export interface Employee {
   hire_date: string | null;
   termination_date: string | null;
   user_id: string | null;
+  // Personal details
+  date_of_birth: string | null;
+  nationality: string | null;
+  cpr_number: string | null;
+  passport_number: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  // Emergency contact
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relation: string | null;
+  // Bank details
+  bank_name: string | null;
+  bank_account_number: string | null;
+  iban: string | null;
+  // Compensation
+  salary: number | null;
+  salary_type: SalaryType | null;
+  // Notes
+  notes: string | null;
+  // Timestamps
   created_at: string;
   updated_at: string;
 }
@@ -37,18 +62,29 @@ export interface CreateEmployeeInput {
   phone?: string;
   role?: EmployeeRole;
   hire_date?: string;
+  date_of_birth?: string;
+  nationality?: string;
+  cpr_number?: string;
+  passport_number?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relation?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  iban?: string;
+  salary?: number;
+  salary_type?: SalaryType;
+  notes?: string;
 }
 
 /**
  * Input for updating an existing employee.
  */
-export interface UpdateEmployeeInput {
-  full_name?: string;
-  email?: string;
-  phone?: string;
-  role?: EmployeeRole;
+export interface UpdateEmployeeInput extends Partial<CreateEmployeeInput> {
   status?: EmployeeStatus;
-  hire_date?: string;
   termination_date?: string;
 }
 

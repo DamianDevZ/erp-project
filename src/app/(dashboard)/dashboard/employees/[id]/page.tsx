@@ -123,7 +123,7 @@ export default async function EmployeeDetailPage({ params }: Props) {
               </div>
             )}
             <div>
-              <p className="text-sm text-muted">Platform Assignments</p>
+              <p className="text-sm text-muted">Client Assignments</p>
               {activeAssignments.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {activeAssignments.map((assignment) => (

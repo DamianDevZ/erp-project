@@ -90,7 +90,7 @@ export function PlatformList() {
       {/* Filters */}
       <div className="flex flex-wrap gap-4">
         <Input
-          placeholder="Search platforms..."
+          placeholder="Search clients..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -103,13 +103,13 @@ export function PlatformList() {
           <div className="p-6 text-center">
             <p className="text-muted">
               {platforms.length === 0 
-                ? 'No platforms yet. Add your first platform to get started.'
-                : 'No platforms match your search.'
+                ? 'No clients yet. Add your first client to get started.'
+                : 'No clients match your search.'
               }
             </p>
             {platforms.length === 0 && (
               <Link href="/dashboard/platforms/new">
-                <Button className="mt-4">Add Platform</Button>
+                <Button className="mt-4">Add Client</Button>
               </Link>
             )}
           </div>
