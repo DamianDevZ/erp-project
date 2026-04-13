@@ -14,6 +14,7 @@ export type EmployeeRole = 'rider' | 'supervisor' | 'manager' | 'hr';
 export interface Employee {
   id: string;
   organization_id: string;
+  employee_id: string | null;
   full_name: string;
   email: string | null;
   phone: string | null;
@@ -31,6 +32,7 @@ export interface Employee {
  */
 export interface CreateEmployeeInput {
   full_name: string;
+  employee_id?: string;
   email?: string;
   phone?: string;
   role?: EmployeeRole;

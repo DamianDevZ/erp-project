@@ -58,6 +58,7 @@ export function EmployeeForm({ employee }: EmployeeFormProps) {
 
   // Form state
   const [fullName, setFullName] = useState(employee?.full_name || '');
+  const [employeeIdField, setEmployeeIdField] = useState(employee?.employee_id || '');
   const [email, setEmail] = useState(employee?.email || '');
   const [phone, setPhone] = useState(employee?.phone || '');
   const [role, setRole] = useState<EmployeeRole>(employee?.role || 'rider');
@@ -160,6 +161,7 @@ export function EmployeeForm({ employee }: EmployeeFormProps) {
 
       const data = {
         full_name: fullName,
+        employee_id: employeeIdField || null,
         email: email || null,
         phone: phone || null,
         role,
@@ -257,8 +259,20 @@ export function EmployeeForm({ employee }: EmployeeFormProps) {
 
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">
+            {/* Employee ID */}
+            <div className="space-y-2">
+              <Label htmlFor="employeeId">Employee ID</Label>
+              <Input
+                id="employeeId"
+                value={employeeIdField}
+                onChange={(e) => setEmployeeIdField(e.target.value)}
+                placeholder="EMP-001"
+              />
+              <p className="text-xs text-muted">Optional unique identifier for this employee</p>
+            </div>
+
             {/* Full Name */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="fullName" required>Full Name</Label>
               <Input
                 id="fullName"

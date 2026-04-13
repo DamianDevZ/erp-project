@@ -14,6 +14,10 @@ export interface Platform {
   name: string;
   contact_email: string | null;
   contact_phone: string | null;
+  vat_id: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
   is_active: boolean;
   billing_rate_type: BillingRateType | null;
   billing_rate: number | null;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -13,21 +13,17 @@ import {
   Label,
   Spinner,
 } from '@/components/ui';
-import type { Invoice, InvoiceStatus, LineItemType } from '@/features/invoicing';
+import type { Invoice, InvoiceStatus } from '@/features/invoicing';
 import type { Platform } from '@/features/platforms';
-
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  amount: number;
-  type: LineItemType;
-}
 
 interface InvoiceFormProps {
   invoice?: Invoice;
-  existingLineItems?: LineItem[];
+}
+
+interface AttachmentPreview {
+  file: File;
+  preview: string;
+  uploading?: boolean;
 }
 
 // Icons
@@ -55,28 +51,32 @@ function CurrencyIcon({ className }: { className?: string }) {
   );
 }
 
-function PlusIcon({ className }: { className?: string }) {
+function ImageIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
     </svg>
   );
 }
 
-function TrashIcon({ className }: { className?: string }) {
+function XIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   );
 }
 
 /**
- * Form for creating or editing an invoice with line items.
+ * Form for creating or editing an invoice.
+ * Simplified billing: Payroll Amount + 10% VAT = Total Invoiced Amount
+ * Currency: BHD (Bahraini Dinar) with 3 decimal places
  */
-export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProps) {
+export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const router = useRouter();
   const isEdit = !!invoice;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,30 +84,33 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
 
   const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoice_number || '');
+  const [title, setTitle] = useState(invoice?.title || '');
   const [platformId, setPlatformId] = useState(invoice?.platform_id || '');
   const [periodStart, setPeriodStart] = useState(invoice?.period_start || '');
   const [periodEnd, setPeriodEnd] = useState(invoice?.period_end || '');
   const [status, setStatus] = useState<InvoiceStatus>(invoice?.status || 'draft');
   const [dueAt, setDueAt] = useState(invoice?.due_at?.split('T')[0] || '');
   const [notes, setNotes] = useState(invoice?.notes || '');
-  const [taxRate, setTaxRate] = useState(invoice?.tax_rate?.toString() || '0');
-
-  // Line items
-  const [lineItems, setLineItems] = useState<LineItem[]>(
-    existingLineItems.length > 0 
-      ? existingLineItems 
-      : [{ id: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0, amount: 0, type: 'service' as LineItemType }]
-  );
-
-  // Calculate totals
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  const taxAmount = subtotal * (parseFloat(taxRate) / 100);
-  const total = subtotal + taxAmount;
+  
+  // Simplified billing - just payroll amount, VAT is fixed at 10%
+  const [payrollAmount, setPayrollAmount] = useState(invoice?.subtotal?.toString() || '');
+  
+  // Image attachments
+  const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<{ id: string; file_url: string; file_name: string }[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
+  
+  // Calculate VAT (10%) and total
+  const payrollValue = parseFloat(payrollAmount) || 0;
+  const vatAmount = payrollValue * 0.10;
+  const totalAmount = payrollValue + vatAmount;
 
   useEffect(() => {
     fetchPlatforms();
     if (!isEdit) {
       generateInvoiceNumber();
+    } else {
+      fetchExistingAttachments();
     }
   }, []);
 
@@ -129,6 +132,23 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
     }
   }
 
+  async function fetchExistingAttachments() {
+    if (!invoice?.id) return;
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('invoice_attachments')
+        .select('id, file_url, file_name')
+        .eq('invoice_id', invoice.id)
+        .order('created_at');
+
+      if (error) throw error;
+      setExistingAttachments(data || []);
+    } catch (err) {
+      console.error('Failed to fetch attachments:', err);
+    }
+  }
+
   async function generateInvoiceNumber() {
     const date = new Date();
     const year = date.getFullYear();
@@ -137,7 +157,6 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
     
     try {
       const supabase = createClient();
-      // Count invoices for this org in this year/month
       const { count, error } = await supabase
         .from('invoices')
         .select('*', { count: 'exact', head: true })
@@ -148,34 +167,115 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
       const sequence = ((count || 0) + 1).toString().padStart(3, '0');
       setInvoiceNumber(`INV-${yearMonth}-${sequence}`);
     } catch (err) {
-      // Fallback to 001 if query fails
       console.error('Failed to generate invoice number:', err);
       setInvoiceNumber(`INV-${yearMonth}-001`);
     }
   }
 
-  function addLineItem() {
-    setLineItems([
-      ...lineItems,
-      { id: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0, amount: 0, type: 'service' as LineItemType }
-    ]);
-  }
-
-  function removeLineItem(id: string) {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter(item => item.id !== id));
-    }
-  }
-
-  function updateLineItem(id: string, field: keyof LineItem, value: string | number) {
-    setLineItems(lineItems.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        updated.amount = updated.quantity * updated.unit_price;
-        return updated;
-      }
-      return item;
+  // Handle file selection
+  const handleFileSelect = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const imageFiles = fileArray.filter(file => file.type.startsWith('image/'));
+    
+    const newAttachments: AttachmentPreview[] = imageFiles.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
     }));
+    
+    setAttachments(prev => [...prev, ...newAttachments]);
+  }, []);
+
+  // Handle paste event (for screenshots)
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'));
+    if (imageItems.length === 0) return;
+
+    e.preventDefault();
+    const files = imageItems.map(item => item.getAsFile()).filter((f): f is File => f !== null);
+    handleFileSelect(files);
+  }, [handleFileSelect]);
+
+  // Handle drag and drop
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) {
+      handleFileSelect(e.dataTransfer.files);
+    }
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  // Remove attachment
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments(prev => {
+      const removed = prev[index];
+      URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  // Remove existing attachment
+  const removeExistingAttachment = async (attachmentId: string) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('invoice_attachments')
+        .delete()
+        .eq('id', attachmentId);
+      
+      if (error) throw error;
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
+    } catch (err) {
+      console.error('Failed to remove attachment:', err);
+    }
+  };
+
+  // Upload attachments to Supabase Storage
+  async function uploadAttachments(invoiceId: string) {
+    if (attachments.length === 0) return;
+    
+    setUploadingAttachments(true);
+    const supabase = createClient();
+    
+    for (const attachment of attachments) {
+      try {
+        const ext = attachment.file.name.split('.').pop() || 'png';
+        const fileName = `${invoiceId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+        
+        // Upload to storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('invoice-attachments')
+          .upload(fileName, attachment.file);
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          continue;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('invoice-attachments')
+          .getPublicUrl(fileName);
+        
+        // Save attachment record
+        await supabase.from('invoice_attachments').insert({
+          invoice_id: invoiceId,
+          file_url: publicUrl,
+          file_name: attachment.file.name,
+          file_type: attachment.file.type,
+          file_size: attachment.file.size,
+        });
+      } catch (err) {
+        console.error('Failed to upload attachment:', err);
+      }
+    }
+    
+    setUploadingAttachments(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -188,13 +288,14 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
 
       const invoiceData = {
         invoice_number: invoiceNumber,
+        title: title || null,
         platform_id: platformId || null,
         period_start: periodStart,
         period_end: periodEnd,
-        subtotal,
-        tax_rate: parseFloat(taxRate) || 0,
-        tax_amount: taxAmount,
-        total,
+        subtotal: payrollValue,
+        tax_rate: 10,
+        tax_amount: vatAmount,
+        total: totalAmount,
         status,
         due_at: dueAt || null,
         notes: notes || null,
@@ -209,9 +310,6 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
           .eq('id', invoice.id);
 
         if (error) throw error;
-
-        // Delete existing line items
-        await supabase.from('invoice_line_items').delete().eq('invoice_id', invoice.id);
       } else {
         const { data, error } = await supabase
           .from('invoices')
@@ -223,23 +321,9 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
         invoiceId = data.id;
       }
 
-      // Insert line items
-      if (invoiceId && lineItems.length > 0) {
-        const lineItemsData = lineItems
-          .filter(item => item.description.trim() !== '')
-          .map(item => ({
-            invoice_id: invoiceId,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            amount: item.quantity * item.unit_price,
-            type: item.type,
-          }));
-
-        if (lineItemsData.length > 0) {
-          const { error } = await supabase.from('invoice_line_items').insert(lineItemsData);
-          if (error) throw error;
-        }
+      // Upload any new attachments
+      if (invoiceId && attachments.length > 0) {
+        await uploadAttachments(invoiceId);
       }
 
       router.push('/dashboard/invoices');
@@ -251,11 +335,12 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
     }
   }
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  // Format BHD with 3 decimal places
+  const formatBHD = (amount: number) =>
+    `BHD ${amount.toFixed(3)}`;
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl">
+    <form onSubmit={handleSubmit} className="max-w-3xl">
       {error && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
           <div className="flex items-center gap-2">
@@ -318,6 +403,18 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
                   ))}
                 </select>
               )}
+            </div>
+
+            {/* Title */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="title">Invoice Title</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Driver Services - April 2026"
+              />
+              <p className="text-xs text-muted">Optional title or description for this invoice</p>
             </div>
 
             {/* Status */}
@@ -393,148 +490,170 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
         </CardContent>
       </Card>
 
-      {/* Line Items */}
+      {/* Billing Amount */}
       <Card className="mb-6">
         <CardHeader className="border-b border-border bg-background-subtle">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                <CurrencyIcon className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Line Items</CardTitle>
-                <p className="text-sm text-muted">Add services and charges</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+              <CurrencyIcon className="h-5 w-5 text-green-600" />
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
-              <PlusIcon className="mr-1 h-4 w-4" />
-              Add Item
-            </Button>
+            <div>
+              <CardTitle className="text-base">Billing Amount</CardTitle>
+              <p className="text-sm text-muted">Enter the payroll amount - VAT (10%) is calculated automatically</p>
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="pt-6">
-          {/* Line items table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-3 px-2 text-left text-sm font-medium text-muted">Description</th>
-                  <th className="py-3 px-2 text-left text-sm font-medium text-muted w-24">Type</th>
-                  <th className="py-3 px-2 text-right text-sm font-medium text-muted w-20">Qty</th>
-                  <th className="py-3 px-2 text-right text-sm font-medium text-muted w-28">Unit Price</th>
-                  <th className="py-3 px-2 text-right text-sm font-medium text-muted w-28">Amount</th>
-                  <th className="py-3 px-2 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.map((item, index) => (
-                  <tr key={item.id} className="border-b border-border">
-                    <td className="py-2 px-2">
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        placeholder="Delivery services..."
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <select
-                        value={item.type}
-                        onChange={(e) => updateLineItem(item.id, 'type', e.target.value)}
-                        className="w-full rounded-md border border-border bg-input px-2 py-2 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="service">Service</option>
-                        <option value="deliveries">Deliveries</option>
-                        <option value="hours">Hours</option>
-                        <option value="bonus">Bonus</option>
-                        <option value="adjustment">Adjustment</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </td>
-                    <td className="py-2 px-2">
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                        min="0"
-                        step="1"
-                        className="text-right"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <Input
-                        type="number"
-                        value={item.unit_price}
-                        onChange={(e) => updateLineItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-                        min="0"
-                        step="0.01"
-                        className="text-right"
-                      />
-                    </td>
-                    <td className="py-2 px-2 text-right font-medium text-heading">
-                      {formatCurrency(item.quantity * item.unit_price)}
-                    </td>
-                    <td className="py-2 px-2">
-                      <button
-                        type="button"
-                        onClick={() => removeLineItem(item.id)}
-                        className="p-1 text-muted hover:text-red-500 disabled:opacity-50"
-                        disabled={lineItems.length === 1}
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Payroll Amount Input */}
+          <div className="space-y-2 max-w-xs">
+            <Label htmlFor="payrollAmount" required>Payroll Amount</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted font-medium">BHD</span>
+              <Input
+                id="payrollAmount"
+                type="number"
+                value={payrollAmount}
+                onChange={(e) => setPayrollAmount(e.target.value)}
+                placeholder="0.000"
+                step="0.001"
+                min="0"
+                className="pl-14 text-right font-mono"
+                required
+              />
+            </div>
           </div>
 
-          {/* Totals */}
-          <div className="mt-6 flex justify-end">
-            <div className="w-72 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted">Subtotal</span>
-                <span className="font-medium text-heading">{formatCurrency(subtotal)}</span>
+          {/* Summary */}
+          <div className="mt-8 rounded-lg border border-border bg-background-subtle p-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-body">Payroll Amount</span>
+                <span className="font-mono text-heading">{formatBHD(payrollValue)}</span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted">Tax</span>
-                  <Input
-                    type="number"
-                    value={taxRate}
-                    onChange={(e) => setTaxRate(e.target.value)}
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    className="w-16 text-right text-sm py-1"
-                  />
-                  <span className="text-muted">%</span>
-                </div>
-                <span className="font-medium text-heading">{formatCurrency(taxAmount)}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-body">VAT (10%)</span>
+                <span className="font-mono text-heading">{formatBHD(vatAmount)}</span>
               </div>
-              <div className="flex justify-between border-t border-border pt-3">
-                <span className="text-lg font-bold text-heading">Total</span>
-                <span className="text-lg font-bold text-heading">{formatCurrency(total)}</span>
+              <div className="border-t border-border pt-4 flex justify-between items-center">
+                <span className="text-lg font-semibold text-heading">Total Invoiced Amount</span>
+                <span className="text-lg font-bold font-mono text-primary">{formatBHD(totalAmount)}</span>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Notes */}
+      {/* Notes & Attachments */}
       <Card className="mb-6">
+        <CardHeader className="border-b border-border bg-background-subtle">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+              <ImageIcon className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Notes & Attachments</CardTitle>
+              <p className="text-sm text-muted">Add notes and attach images (paste screenshots or drag files)</p>
+            </div>
+          </div>
+        </CardHeader>
         <CardContent className="pt-6">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes or payment instructions..."
-              rows={4}
-              className="w-full rounded-lg border border-border bg-input px-4 py-3 text-sm text-heading placeholder:text-placeholder focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <textarea
+                ref={notesRef}
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onPaste={handlePaste}
+                placeholder="Additional notes or payment instructions... (Paste images with Ctrl+V)"
+                rows={4}
+                className="w-full rounded-lg border border-border bg-input px-4 py-3 text-sm text-heading placeholder:text-placeholder focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </div>
+
+            {/* Attachment Upload Area */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="rounded-lg border-2 border-dashed border-border p-6 text-center hover:border-primary transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageIcon className="h-8 w-8 mx-auto text-muted mb-2" />
+              <p className="text-sm text-muted">
+                Drag & drop images here, or click to select
+              </p>
+              <p className="text-xs text-muted mt-1">
+                You can also paste screenshots directly in the notes field
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => e.target.files && handleFileSelect(e.target.files)}
+              />
+            </div>
+
+            {/* Existing Attachments (for edit mode) */}
+            {existingAttachments.length > 0 && (
+              <div className="space-y-2">
+                <Label>Existing Attachments</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {existingAttachments.map((attachment) => (
+                    <div key={attachment.id} className="relative group">
+                      <a
+                        href={attachment.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <img
+                          src={attachment.file_url}
+                          alt={attachment.file_name}
+                          className="w-full h-24 object-cover rounded-lg border border-border"
+                        />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingAttachment(attachment.id)}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Attachment Previews */}
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                <Label>New Attachments ({attachments.length})</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {attachments.map((attachment, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={attachment.preview}
+                        alt={attachment.file.name}
+                        className="w-full h-24 object-cover rounded-lg border border-border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </button>
+                      <p className="text-xs text-muted truncate mt-1">{attachment.file.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -549,11 +668,9 @@ export function InvoiceForm({ invoice, existingLineItems = [] }: InvoiceFormProp
         >
           Cancel
         </Button>
-        <div className="flex gap-3">
-          <Button type="submit" loading={loading}>
-            {isEdit ? 'Save Changes' : 'Create Invoice'}
-          </Button>
-        </div>
+        <Button type="submit" loading={loading}>
+          {isEdit ? 'Save Changes' : 'Create Invoice'}
+        </Button>
       </div>
     </form>
   );

@@ -46,6 +46,12 @@ export function PlatformForm({ platform }: PlatformFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(platform?.name || '');
+  const [contactEmail, setContactEmail] = useState(platform?.contact_email || '');
+  const [contactPhone, setContactPhone] = useState(platform?.contact_phone || '');
+  const [vatId, setVatId] = useState(platform?.vat_id || '');
+  const [address, setAddress] = useState(platform?.address || '');
+  const [city, setCity] = useState(platform?.city || '');
+  const [country, setCountry] = useState(platform?.country || '');
   const [billingRate, setBillingRate] = useState(platform?.billing_rate?.toString() || '');
   const [billingRateType, setBillingRateType] = useState<BillingRateType>(
     platform?.billing_rate_type || 'per_delivery'
@@ -62,6 +68,12 @@ export function PlatformForm({ platform }: PlatformFormProps) {
 
       const data = {
         name,
+        contact_email: contactEmail || null,
+        contact_phone: contactPhone || null,
+        vat_id: vatId || null,
+        address: address || null,
+        city: city || null,
+        country: country || null,
         billing_rate: billingRate ? parseFloat(billingRate) : null,
         billing_rate_type: billingRateType,
         is_active: isActive,
@@ -129,6 +141,71 @@ export function PlatformForm({ platform }: PlatformFormProps) {
               required
             />
             <p className="text-xs text-muted">The delivery platform your company works with</p>
+          </div>
+
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="contactEmail">Contact Email</Label>
+              <Input
+                id="contactEmail"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="contact@platform.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contactPhone">Contact Phone</Label>
+              <Input
+                id="contactPhone"
+                type="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="+973 1234 5678"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-2">
+            <Label htmlFor="vatId">VAT ID / Tax Registration Number</Label>
+            <Input
+              id="vatId"
+              value={vatId}
+              onChange={(e) => setVatId(e.target.value)}
+              placeholder="VAT1234567890"
+            />
+            <p className="text-xs text-muted">This will appear on invoices sent to this platform</p>
+          </div>
+
+          <div className="mt-6 space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Business Street"
+            />
+          </div>
+
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Manama"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="Bahrain"
+              />
+            </div>
           </div>
 
           {/* Status (only show in edit mode) */}

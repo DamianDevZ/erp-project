@@ -3,18 +3,10 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui';
 
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  amount: number;
-  type: string;
-}
-
 interface InvoiceDocumentProps {
   invoice: {
     invoice_number: string;
+    title: string | null;
     period_start: string;
     period_end: string;
     subtotal: number;
@@ -25,24 +17,31 @@ interface InvoiceDocumentProps {
     issued_at: string | null;
     due_at: string | null;
     notes: string | null;
-    platform?: { name: string } | null;
+    platform?: { 
+      name: string;
+      vat_id?: string | null;
+      address?: string | null;
+      city?: string | null;
+      country?: string | null;
+    } | null;
   };
   organization: {
     name: string;
     logo_url: string | null;
   } | null;
-  lineItems: LineItem[];
 }
 
 /**
  * Professional invoice document component.
- * Can be printed or saved as PDF.
+ * Currency: BHD (Bahraini Dinar) with 3 decimal places
+ * Displays: Payroll Amount, VAT (10%), Total Invoiced Amount
  */
-export function InvoiceDocument({ invoice, organization, lineItems }: InvoiceDocumentProps) {
+export function InvoiceDocument({ invoice, organization }: InvoiceDocumentProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  // Format BHD with 3 decimal places
+  const formatBHD = (amount: number) =>
+    `BHD ${amount.toFixed(3)}`;
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-US', { 
@@ -116,6 +115,17 @@ export function InvoiceDocument({ invoice, organization, lineItems }: InvoiceDoc
           <div>
             <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Bill To</p>
             <p className="text-lg font-semibold text-gray-900">{invoice.platform?.name || 'Platform'}</p>
+            {invoice.platform?.vat_id && (
+              <p className="text-sm text-gray-600 mt-1">VAT ID: {invoice.platform.vat_id}</p>
+            )}
+            {invoice.platform?.address && (
+              <p className="text-sm text-gray-600 mt-1">{invoice.platform.address}</p>
+            )}
+            {(invoice.platform?.city || invoice.platform?.country) && (
+              <p className="text-sm text-gray-600">
+                {[invoice.platform.city, invoice.platform.country].filter(Boolean).join(', ')}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <div className="space-y-2">
@@ -141,56 +151,43 @@ export function InvoiceDocument({ invoice, organization, lineItems }: InvoiceDoc
           </div>
         </div>
 
-        {/* Line Items Table */}
+        {/* Invoice Title (if provided) */}
+        {invoice.title && (
+          <div className="py-6 border-b border-gray-200">
+            <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Description</p>
+            <p className="text-lg text-gray-900">{invoice.title}</p>
+          </div>
+        )}
+
+        {/* Billing Summary */}
         <div className="py-8">
           <table className="w-full">
             <thead>
               <tr className="border-b-2 border-gray-200">
                 <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">Description</th>
-                <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase tracking-wide w-24">Qty</th>
-                <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase tracking-wide w-32">Unit Price</th>
-                <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase tracking-wide w-32">Amount</th>
+                <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 uppercase tracking-wide w-40">Amount (BHD)</th>
               </tr>
             </thead>
             <tbody>
-              {lineItems.length > 0 ? (
-                lineItems.map((item, index) => (
-                  <tr key={item.id} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-                    <td className="py-4 px-2 text-gray-900">{item.description}</td>
-                    <td className="py-4 px-2 text-right text-gray-600">{item.quantity}</td>
-                    <td className="py-4 px-2 text-right text-gray-600">{formatCurrency(item.unit_price)}</td>
-                    <td className="py-4 px-2 text-right text-gray-900 font-medium">{formatCurrency(item.amount)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className="py-4 px-2 text-gray-900">Delivery Services</td>
-                  <td className="py-4 px-2 text-right text-gray-600">1</td>
-                  <td className="py-4 px-2 text-right text-gray-600">{formatCurrency(invoice.subtotal || invoice.total)}</td>
-                  <td className="py-4 px-2 text-right text-gray-900 font-medium">{formatCurrency(invoice.subtotal || invoice.total)}</td>
-                </tr>
-              )}
+              <tr className="bg-gray-50">
+                <td className="py-4 px-2 text-gray-900">Payroll Amount</td>
+                <td className="py-4 px-2 text-right font-mono text-gray-900">{formatBHD(invoice.subtotal)}</td>
+              </tr>
+              <tr>
+                <td className="py-4 px-2 text-gray-900">VAT ({invoice.tax_rate || 10}%)</td>
+                <td className="py-4 px-2 text-right font-mono text-gray-900">{formatBHD(invoice.tax_amount)}</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Totals */}
-        <div className="border-t border-gray-200 pt-6">
+        {/* Total */}
+        <div className="border-t-2 border-gray-900 pt-6">
           <div className="flex justify-end">
-            <div className="w-72 space-y-3">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span>{formatCurrency(invoice.subtotal || invoice.total)}</span>
-              </div>
-              {invoice.tax_rate > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>Tax ({invoice.tax_rate}%)</span>
-                  <span>{formatCurrency(invoice.tax_amount || 0)}</span>
-                </div>
-              )}
-              <div className="flex justify-between border-t-2 border-gray-900 pt-3">
-                <span className="text-xl font-bold text-gray-900">Total</span>
-                <span className="text-xl font-bold text-gray-900">{formatCurrency(invoice.total)}</span>
+            <div className="w-72">
+              <div className="flex justify-between items-center">
+                <span className="text-xl font-bold text-gray-900">Total Invoiced Amount</span>
+                <span className="text-xl font-bold font-mono text-gray-900">{formatBHD(invoice.total)}</span>
               </div>
             </div>
           </div>

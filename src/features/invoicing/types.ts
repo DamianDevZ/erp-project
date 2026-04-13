@@ -34,6 +34,7 @@ export interface Invoice {
   organization_id: string;
   platform_id: string;
   invoice_number: string;
+  title: string | null;
   period_start: string;
   period_end: string;
   subtotal: number;
@@ -47,6 +48,20 @@ export interface Invoice {
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Invoice attachment for images/files.
+ */
+export interface InvoiceAttachment {
+  id: string;
+  organization_id: string;
+  invoice_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string | null;
+  file_size: number | null;
+  created_at: string;
 }
 
 /**

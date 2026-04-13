@@ -28,7 +28,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
   // Fetch invoice with platform
   const { data: invoice, error } = await supabase
     .from('invoices')
-    .select('*, platform:platforms(name)')
+    .select('*, platform:platforms(name, vat_id, address, city, country)')
     .eq('id', id)
     .single();
 
@@ -42,13 +42,6 @@ export default async function InvoiceDetailPage({ params }: Props) {
     .select('name, logo_url')
     .eq('id', profile?.organization_id)
     .single();
-
-  // Fetch line items
-  const { data: lineItems } = await supabase
-    .from('invoice_line_items')
-    .select('*')
-    .eq('invoice_id', id)
-    .order('created_at');
 
   return (
     <div className="space-y-6">
@@ -81,7 +74,6 @@ export default async function InvoiceDetailPage({ params }: Props) {
         <InvoiceDocument 
           invoice={invoice}
           organization={organization}
-          lineItems={lineItems || []}
         />
       </div>
     </div>
