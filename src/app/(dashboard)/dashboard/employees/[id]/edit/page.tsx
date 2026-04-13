@@ -13,13 +13,20 @@ export default async function EditEmployeePage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: employee, error } = await supabase
-    .from('employees')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Fetch the employee and all employees in parallel
+  const [employeeResult, employeesResult] = await Promise.all([
+    supabase
+      .from('employees')
+      .select('*')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('employees')
+      .select('id, full_name')
+      .order('full_name'),
+  ]);
 
-  if (error || !employee) {
+  if (employeeResult.error || !employeeResult.data) {
     notFound();
   }
 
@@ -30,7 +37,7 @@ export default async function EditEmployeePage({ params }: Props) {
         <p className="text-muted">Update employee information.</p>
       </div>
 
-      <EmployeeForm employee={employee} />
+      <EmployeeForm employee={employeeResult.data} employees={employeesResult.data || []} />
     </div>
   );
 }

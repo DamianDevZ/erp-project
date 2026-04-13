@@ -26,6 +26,11 @@ export interface Employee {
   hire_date: string | null;
   termination_date: string | null;
   user_id: string | null;
+  // Job details
+  job_title: string | null;
+  job_description: string | null;
+  department: string | null;
+  reports_to: string | null;
   // Personal details
   date_of_birth: string | null;
   nationality: string | null;
@@ -62,6 +67,12 @@ export interface CreateEmployeeInput {
   phone?: string;
   role?: EmployeeRole;
   hire_date?: string;
+  // Job details
+  job_title?: string;
+  job_description?: string;
+  department?: string;
+  reports_to?: string;
+  // Personal details
   date_of_birth?: string;
   nationality?: string;
   cpr_number?: string;

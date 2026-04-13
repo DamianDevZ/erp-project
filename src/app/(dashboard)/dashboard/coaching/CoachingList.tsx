@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   Input,
+  Badge,
   Table,
   TableHeader,
   TableBody,
@@ -15,15 +16,62 @@ import {
   TableCell,
   Spinner,
 } from '@/components/ui';
-import type { CoachingWithRelations } from '@/features/coaching';
+import type { 
+  CoachingWithRelations, 
+  CoachingType, 
+  CoachingStatus, 
+  CoachingOutcome 
+} from '@/features/coaching';
 
 interface CoachingListProps {
   coachings: CoachingWithRelations[];
   loading?: boolean;
 }
 
+// Type labels
+const TYPE_LABELS: Record<CoachingType, string> = {
+  corrective: 'Corrective',
+  goal_setting: 'Goal Setting',
+  performance_review: 'Performance',
+  one_on_one: '1-on-1',
+  training: 'Training',
+  other: 'Other',
+};
+
+// Status badges
+const STATUS_COLORS: Record<CoachingStatus, 'default' | 'success' | 'warning' | 'error' | 'outline'> = {
+  draft: 'outline',
+  scheduled: 'default',
+  completed: 'success',
+  acknowledged: 'success',
+};
+
+const STATUS_LABELS: Record<CoachingStatus, string> = {
+  draft: 'Draft',
+  scheduled: 'Scheduled',
+  completed: 'Completed',
+  acknowledged: 'Acknowledged',
+};
+
+// Outcome badges
+const OUTCOME_COLORS: Record<CoachingOutcome, 'default' | 'success' | 'warning' | 'error' | 'outline'> = {
+  exceeded: 'success',
+  met: 'success',
+  needs_improvement: 'warning',
+  unacceptable: 'error',
+  pending: 'outline',
+};
+
+const OUTCOME_LABELS: Record<CoachingOutcome, string> = {
+  exceeded: 'Exceeded',
+  met: 'Met',
+  needs_improvement: 'Needs Improvement',
+  unacceptable: 'Unacceptable',
+  pending: 'Pending',
+};
+
 /**
- * List component for coaching sessions with search and view.
+ * Enhanced list component for coaching sessions.
  */
 export function CoachingList({ coachings, loading }: CoachingListProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,9 +79,11 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
   const filteredCoachings = coachings.filter((coaching) => {
     const employeeName = coaching.employee?.full_name?.toLowerCase() || '';
     const employeeId = coaching.employee?.employee_id?.toLowerCase() || '';
+    const managerNotes = coaching.manager_notes?.toLowerCase() || '';
     const notes = coaching.notes?.toLowerCase() || '';
     const search = searchTerm.toLowerCase();
-    return employeeName.includes(search) || employeeId.includes(search) || notes.includes(search);
+    return employeeName.includes(search) || employeeId.includes(search) || 
+           managerNotes.includes(search) || notes.includes(search);
   });
 
   const formatDate = (date: string) =>
@@ -41,12 +91,6 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    });
-
-  const formatTime = (date: string) =>
-    new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
     });
 
   if (loading) {
@@ -100,10 +144,10 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
                 <TableHead>Employee</TableHead>
-                <TableHead>Employee ID</TableHead>
-                <TableHead>Notes Preview</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Outcome</TableHead>
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -120,22 +164,33 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
                     <TableCell className="font-medium">
                       {formatDate(coaching.coaching_date)}
                     </TableCell>
-                    <TableCell className="text-muted">
-                      {formatTime(coaching.coaching_date)}
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <Link
+                          href={`/dashboard/employees/${coaching.employee_id}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {coaching.employee?.full_name || 'Unknown'}
+                        </Link>
+                        {coaching.employee?.employee_id && (
+                          <span className="text-xs text-muted">{coaching.employee.employee_id}</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Link
-                        href={`/dashboard/employees/${coaching.employee_id}`}
-                        className="text-primary hover:underline"
-                      >
-                        {coaching.employee?.full_name || 'Unknown'}
-                      </Link>
+                      <span className="text-sm">
+                        {TYPE_LABELS[coaching.coaching_type as CoachingType] || coaching.coaching_type || '-'}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-muted font-mono text-sm">
-                      {coaching.employee?.employee_id || '-'}
+                    <TableCell>
+                      <Badge variant={STATUS_COLORS[coaching.status as CoachingStatus] || 'default'}>
+                        {STATUS_LABELS[coaching.status as CoachingStatus] || coaching.status || 'Draft'}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate text-muted">
-                      {coaching.notes || '-'}
+                    <TableCell>
+                      <Badge variant={OUTCOME_COLORS[coaching.outcome as CoachingOutcome] || 'outline'}>
+                        {OUTCOME_LABELS[coaching.outcome as CoachingOutcome] || coaching.outcome || 'Pending'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">

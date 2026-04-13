@@ -12,9 +12,20 @@ import {
   Input,
   Label,
   Spinner,
+  Badge,
 } from '@/components/ui';
-import type { Coaching } from '@/features/coaching';
-import type { Employee } from '@/features/employees';
+import type { 
+  Coaching, 
+  CoachingType, 
+  CoachingStatus, 
+  CoachingOutcome,
+} from '@/features/coaching';
+
+interface EmployeeOption {
+  id: string;
+  full_name: string;
+  employee_id: string | null;
+}
 
 interface CoachingFormProps {
   coaching?: Coaching;
@@ -38,8 +49,50 @@ function UserIcon({ className }: { className?: string }) {
   );
 }
 
+function ChartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+// Type/Status/Outcome labels
+const TYPE_LABELS: Record<CoachingType, string> = {
+  corrective: 'Corrective Action',
+  goal_setting: 'Goal Setting',
+  performance_review: 'Performance Review',
+  one_on_one: '1-on-1 Meeting',
+  training: 'Training',
+  other: 'Other',
+};
+
+const STATUS_LABELS: Record<CoachingStatus, string> = {
+  draft: 'Draft',
+  scheduled: 'Scheduled',
+  completed: 'Completed',
+  acknowledged: 'Acknowledged',
+};
+
+const OUTCOME_LABELS: Record<CoachingOutcome, string> = {
+  exceeded: 'Exceeded Expectations',
+  met: 'Met Expectations',
+  needs_improvement: 'Needs Improvement',
+  unacceptable: 'Unacceptable',
+  pending: 'Pending Evaluation',
+};
+
 /**
- * Form for creating or editing a coaching session.
+ * Enhanced form for creating or editing a coaching session.
+ * Supports multiple coaching types, manager/employee notes, acknowledgment, and outcomes.
  */
 export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormProps) {
   const router = useRouter();
@@ -47,16 +100,27 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
 
+  // Form state
   const [employeeId, setEmployeeId] = useState(coaching?.employee_id || preselectedEmployeeId || '');
+  const [coachingType, setCoachingType] = useState<CoachingType>(coaching?.coaching_type || 'one_on_one');
   const [coachingDate, setCoachingDate] = useState(
     coaching?.coaching_date
       ? new Date(coaching.coaching_date).toISOString().slice(0, 16)
       : new Date().toISOString().slice(0, 16)
   );
-  const [notes, setNotes] = useState(coaching?.notes || '');
+  const [status, setStatus] = useState<CoachingStatus>(coaching?.status || 'draft');
+  const [managerNotes, setManagerNotes] = useState(coaching?.manager_notes || coaching?.notes || '');
+  const [employeeNotes, setEmployeeNotes] = useState(coaching?.employee_notes || '');
+  const [outcome, setOutcome] = useState<CoachingOutcome>(coaching?.outcome || 'pending');
+  const [outcomeNotes, setOutcomeNotes] = useState(coaching?.outcome_notes || '');
+  const [followUpDate, setFollowUpDate] = useState(
+    coaching?.follow_up_date 
+      ? new Date(coaching.follow_up_date).toISOString().slice(0, 10)
+      : ''
+  );
 
   useEffect(() => {
     fetchEmployees();
@@ -67,7 +131,7 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
       const supabase = createClient();
       const { data, error } = await supabase
         .from('employees')
-        .select('*')
+        .select('id, full_name, employee_id')
         .eq('status', 'active')
         .order('full_name');
 
@@ -90,8 +154,15 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
 
       const data = {
         employee_id: employeeId,
+        coaching_type: coachingType,
         coaching_date: coachingDate,
-        notes: notes || null,
+        status,
+        manager_notes: managerNotes || null,
+        employee_notes: employeeNotes || null,
+        notes: managerNotes || null, // Keep legacy field in sync
+        outcome,
+        outcome_notes: outcomeNotes || null,
+        follow_up_date: followUpDate || null,
       };
 
       if (isEdit) {
@@ -119,7 +190,7 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl">
+    <form onSubmit={handleSubmit} className="max-w-4xl">
       {error && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
           <div className="flex items-center gap-2">
@@ -131,7 +202,7 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
         </div>
       )}
 
-      {/* Employee Selection */}
+      {/* Session Details */}
       <Card className="mb-6">
         <CardHeader className="border-b border-border bg-background-subtle">
           <div className="flex items-center gap-3">
@@ -139,8 +210,8 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
               <UserIcon className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-base">Employee</CardTitle>
-              <p className="text-sm text-muted">Select the employee being coached</p>
+              <CardTitle className="text-base">Session Details</CardTitle>
+              <p className="text-sm text-muted">Basic information about the coaching session</p>
             </div>
           </div>
         </CardHeader>
@@ -173,6 +244,22 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
               )}
             </div>
 
+            {/* Coaching Type */}
+            <div className="space-y-2">
+              <Label htmlFor="coachingType" required>Coaching Type</Label>
+              <select
+                id="coachingType"
+                value={coachingType}
+                onChange={(e) => setCoachingType(e.target.value as CoachingType)}
+                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                required
+              >
+                {Object.entries(TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Date & Time */}
             <div className="space-y-2">
               <Label htmlFor="coachingDate" required>Date & Time</Label>
@@ -184,11 +271,38 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
                 required
               />
             </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as CoachingStatus)}
+                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Follow-up Date */}
+            <div className="space-y-2">
+              <Label htmlFor="followUpDate">Follow-up Date</Label>
+              <Input
+                id="followUpDate"
+                type="date"
+                value={followUpDate}
+                onChange={(e) => setFollowUpDate(e.target.value)}
+              />
+              <p className="text-xs text-muted">Optional reminder for follow-up session</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Notes */}
+      {/* Notes Section */}
       <Card className="mb-6">
         <CardHeader className="border-b border-border bg-background-subtle">
           <div className="flex items-center gap-3">
@@ -196,26 +310,128 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
               <ClipboardIcon className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-base">Coaching Notes</CardTitle>
-              <p className="text-sm text-muted">Record details about the coaching session</p>
+              <CardTitle className="text-base">Session Notes</CardTitle>
+              <p className="text-sm text-muted">Record observations, feedback, and employee responses</p>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-6 space-y-6">
+          {/* Manager Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="managerNotes">Manager Notes</Label>
+            <textarea
+              id="managerNotes"
+              value={managerNotes}
+              onChange={(e) => setManagerNotes(e.target.value)}
+              placeholder="Enter your observations, feedback, areas discussed, and action items..."
+              rows={6}
+              className="w-full rounded-lg border border-border bg-input px-4 py-3 text-sm text-heading placeholder:text-placeholder focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+            <p className="text-xs text-muted">Your observations and feedback from the session</p>
+          </div>
+
+          {/* Employee Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="employeeNotes">Employee Notes / Response</Label>
+            <textarea
+              id="employeeNotes"
+              value={employeeNotes}
+              onChange={(e) => setEmployeeNotes(e.target.value)}
+              placeholder="Record the employee's comments, concerns, or feedback..."
+              rows={4}
+              className="w-full rounded-lg border border-border bg-input px-4 py-3 text-sm text-heading placeholder:text-placeholder focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+            <p className="text-xs text-muted">Employee's input and response to the coaching</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Outcome & Evaluation */}
+      <Card className="mb-6">
+        <CardHeader className="border-b border-border bg-background-subtle">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+              <ChartIcon className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Outcome & Evaluation</CardTitle>
+              <p className="text-sm text-muted">Manager's assessment of the employee's performance or progress</p>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="pt-6">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Outcome */}
+            <div className="space-y-2">
+              <Label htmlFor="outcome">Evaluation Outcome</Label>
+              <select
+                id="outcome"
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value as CoachingOutcome)}
+                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Outcome Notes */}
+          <div className="space-y-2 mt-6">
+            <Label htmlFor="outcomeNotes">Outcome Notes</Label>
             <textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter coaching notes, feedback, action items, etc..."
-              rows={8}
+              id="outcomeNotes"
+              value={outcomeNotes}
+              onChange={(e) => setOutcomeNotes(e.target.value)}
+              placeholder="Explain the rationale for the evaluation outcome..."
+              rows={3}
               className="w-full rounded-lg border border-border bg-input px-4 py-3 text-sm text-heading placeholder:text-placeholder focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
         </CardContent>
       </Card>
+
+      {/* Acknowledgment Status (Edit only) */}
+      {isEdit && (
+        <Card className="mb-6">
+          <CardHeader className="border-b border-border bg-background-subtle">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                <CheckIcon className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Acknowledgment Status</CardTitle>
+                <p className="text-sm text-muted">Employee acknowledgment of the coaching session</p>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              {coaching?.employee_acknowledged ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="success">Acknowledged</Badge>
+                  {coaching.acknowledged_at && (
+                    <span className="text-sm text-muted">
+                      on {new Date(coaching.acknowledged_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Badge variant="warning">Pending Acknowledgment</Badge>
+                  <span className="text-sm text-muted">
+                    Employee has not yet acknowledged this coaching session
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
@@ -228,7 +444,7 @@ export function CoachingForm({ coaching, preselectedEmployeeId }: CoachingFormPr
           Cancel
         </Button>
         <Button type="submit" loading={loading}>
-          {isEdit ? 'Save Changes' : 'Create Coaching'}
+          {isEdit ? 'Save Changes' : 'Create Coaching Session'}
         </Button>
       </div>
     </form>

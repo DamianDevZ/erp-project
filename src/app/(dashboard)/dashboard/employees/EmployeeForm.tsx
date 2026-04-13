@@ -18,6 +18,8 @@ import type { Employee, EmployeeRole, EmployeeStatus, CreateEmployeeInput, Salar
 interface EmployeeFormProps {
   /** Existing employee for editing, or undefined for create */
   employee?: Employee;
+  /** List of employees for reports_to dropdown */
+  employees?: Array<{ id: string; full_name: string }>;
 }
 
 // Icons as components
@@ -48,7 +50,7 @@ function KeyIcon({ className }: { className?: string }) {
 /**
  * Form for creating or editing an employee.
  */
-export function EmployeeForm({ employee }: EmployeeFormProps) {
+export function EmployeeForm({ employee, employees = [] }: EmployeeFormProps) {
   const router = useRouter();
   const isEdit = !!employee;
 
@@ -65,6 +67,12 @@ export function EmployeeForm({ employee }: EmployeeFormProps) {
   const [status, setStatus] = useState<EmployeeStatus>(employee?.status || 'pending');
   const [hireDate, setHireDate] = useState(employee?.hire_date || '');
   const [terminationDate, setTerminationDate] = useState(employee?.termination_date || '');
+  
+  // Job details
+  const [jobTitle, setJobTitle] = useState(employee?.job_title || '');
+  const [jobDescription, setJobDescription] = useState(employee?.job_description || '');
+  const [department, setDepartment] = useState(employee?.department || '');
+  const [reportsTo, setReportsTo] = useState(employee?.reports_to || '');
   
   // Personal details
   const [dateOfBirth, setDateOfBirth] = useState(employee?.date_of_birth || '');
@@ -194,6 +202,11 @@ export function EmployeeForm({ employee }: EmployeeFormProps) {
         status,
         hire_date: hireDate || null,
         termination_date: terminationDate || null,
+        // Job details
+        job_title: jobTitle || null,
+        job_description: jobDescription || null,
+        department: department || null,
+        reports_to: reportsTo || null,
         // Personal details
         date_of_birth: dateOfBirth || null,
         nationality: nationality || null,
@@ -427,6 +440,61 @@ export function EmployeeForm({ employee }: EmployeeFormProps) {
                 onChange={(e) => setTerminationDate(e.target.value)}
               />
               <p className="text-xs text-muted">Leave empty for current employees</p>
+            </div>
+
+            {/* Job Title */}
+            <div className="space-y-2">
+              <Label htmlFor="jobTitle">Job Title</Label>
+              <Input
+                id="jobTitle"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="e.g., Senior Delivery Rider"
+              />
+            </div>
+
+            {/* Department */}
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                placeholder="e.g., Operations, Logistics"
+              />
+            </div>
+
+            {/* Reports To */}
+            <div className="space-y-2">
+              <Label htmlFor="reportsTo">Reports To</Label>
+              <select
+                id="reportsTo"
+                value={reportsTo}
+                onChange={(e) => setReportsTo(e.target.value)}
+                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="">Select manager...</option>
+                {employees
+                  .filter((emp) => emp.id !== employee?.id)
+                  .map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.full_name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Job Description */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="jobDescription">Job Description</Label>
+              <textarea
+                id="jobDescription"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Describe the key responsibilities and duties for this role..."
+                rows={3}
+                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none"
+              />
             </div>
           </div>
         </CardContent>
