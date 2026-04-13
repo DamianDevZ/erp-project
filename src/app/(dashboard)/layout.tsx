@@ -65,8 +65,8 @@ export default async function DashboardLayout({
         </main>
       </div>
 
-      {/* Dev role switcher - only in development */}
-      {process.env.NODE_ENV === 'development' && <RoleSwitcher />}
+      {/* Dev role switcher - enabled via env var or in development */}
+      {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true') && <RoleSwitcher />}
     </div>
   );
 }
