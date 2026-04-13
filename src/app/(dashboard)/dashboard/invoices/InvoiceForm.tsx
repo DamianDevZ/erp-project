@@ -289,7 +289,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       const invoiceData = {
         invoice_number: invoiceNumber,
         title: title || null,
-        platform_id: platformId || null,
+        platform_id: platformId,
         period_start: periodStart,
         period_end: periodEnd,
         subtotal: payrollValue,

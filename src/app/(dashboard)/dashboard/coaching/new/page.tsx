@@ -6,8 +6,8 @@ import { CoachingForm } from '../CoachingForm';
  */
 export default function NewCoachingPage() {
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="text-center">
         <Link 
           href="/dashboard/coaching"
           className="inline-flex items-center text-sm text-muted hover:text-heading mb-2"
