@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Spinner } from '@/components/ui';
 import { ReferralForm } from '../../ReferralForm';
@@ -61,16 +60,9 @@ export default function EditReferralPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       {/* Page header */}
-      <div>
-        <div className="flex items-center gap-2 text-sm text-muted mb-2">
-          <Link href="/dashboard/referrals" className="hover:text-heading">
-            Referrals
-          </Link>
-          <span>/</span>
-          <span>Edit</span>
-        </div>
+      <div className="text-center">
         <h1 className="text-2xl font-bold text-heading">Edit Referral</h1>
         <p className="text-muted">Update the referral details.</p>
       </div>

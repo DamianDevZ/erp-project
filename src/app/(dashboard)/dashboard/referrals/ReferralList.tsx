@@ -54,8 +54,8 @@ export function ReferralList() {
         .from('referrals')
         .select(`
           *,
-          referred_by:employees!referrals_referred_by_employee_id_fkey(id, full_name, employee_id),
-          hired_employee:employees!referrals_hired_employee_id_fkey(id, full_name, employee_id)
+          referrer:employees!referrals_referrer_employee_id_fkey(id, full_name, employee_id),
+          referred_employee:employees!referrals_referred_employee_id_fkey(id, full_name, employee_id)
         `)
         .order('created_at', { ascending: false });
 
@@ -87,9 +87,8 @@ export function ReferralList() {
   const filteredReferrals = referrals.filter((ref) => {
     const matchesSearch = 
       ref.referred_name?.toLowerCase().includes(search.toLowerCase()) ||
-      ref.referred_by?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      ref.referred_phone?.includes(search) ||
-      ref.position_applied?.toLowerCase().includes(search.toLowerCase());
+      ref.referrer?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      ref.referred_phone?.includes(search);
     const matchesStatus = statusFilter === 'all' || ref.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -155,7 +154,7 @@ export function ReferralList() {
         <Card className="p-4">
           <p className="text-sm text-muted">Bonuses Pending</p>
           <p className="text-2xl font-bold text-blue-600">
-            {referrals.filter(r => r.status === 'hired' && !r.bonus_paid && r.bonus_amount).length}
+            {referrals.filter(r => r.status === 'hired' && !r.bonus_paid_at && r.bonus_amount).length}
           </p>
         </Card>
       </div>
@@ -168,7 +167,6 @@ export function ReferralList() {
               <TableHead>Referred By</TableHead>
               <TableHead>Candidate</TableHead>
               <TableHead>Contact</TableHead>
-              <TableHead>Position</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Bonus</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -177,7 +175,7 @@ export function ReferralList() {
           <TableBody>
             {filteredReferrals.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted">
+                <TableCell colSpan={6} className="text-center py-8 text-muted">
                   {search || statusFilter !== 'all'
                     ? 'No referrals match your filters.'
                     : 'No referrals yet. Add your first referral.'}
@@ -188,17 +186,12 @@ export function ReferralList() {
                 <TableRow key={referral.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium text-heading">{referral.referred_by?.full_name}</p>
-                      <p className="text-xs text-muted">{referral.referred_by?.employee_id}</p>
+                      <p className="font-medium text-heading">{referral.referrer?.full_name}</p>
+                      <p className="text-xs text-muted">{referral.referrer?.employee_id}</p>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="font-medium text-heading">{referral.referred_name}</p>
-                      {referral.relationship && (
-                        <p className="text-xs text-muted">{referral.relationship}</p>
-                      )}
-                    </div>
+                    <p className="font-medium text-heading">{referral.referred_name}</p>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -209,9 +202,6 @@ export function ReferralList() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{referral.position_applied || '-'}</span>
-                  </TableCell>
-                  <TableCell>
                     <Badge variant={STATUS_COLORS[referral.status]}>
                       {REFERRAL_STATUS_LABELS[referral.status]}
                     </Badge>
@@ -220,8 +210,8 @@ export function ReferralList() {
                     {referral.bonus_amount ? (
                       <div className="text-sm">
                         <p className="font-medium">{referral.bonus_amount.toFixed(3)} BHD</p>
-                        <p className={`text-xs ${referral.bonus_paid ? 'text-green-600' : 'text-yellow-600'}`}>
-                          {referral.bonus_paid ? 'Paid' : 'Pending'}
+                        <p className={`text-xs ${referral.bonus_paid_at ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {referral.bonus_paid_at ? 'Paid' : 'Pending'}
                         </p>
                       </div>
                     ) : (
