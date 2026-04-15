@@ -78,9 +78,11 @@ const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'KPIs', href: '/dashboard/kpis', icon: ChartBarIcon },
     { name: 'Employees', href: '/dashboard/employees', icon: UsersIcon },
+    { name: 'Leaves', href: '/dashboard/leaves', icon: CalendarIcon },
     { name: 'Shifts', href: '/dashboard/shifts', icon: ClockIcon },
     { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
     { name: 'Assets', href: '/dashboard/assets', icon: TruckIcon },
+    { name: 'Locations', href: '/dashboard/locations', icon: MapPinIcon },
   ],
   finance: [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
