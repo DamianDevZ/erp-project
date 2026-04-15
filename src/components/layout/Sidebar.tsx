@@ -24,7 +24,6 @@ interface NavSection {
 const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
   administrator: [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'KPIs', href: '/dashboard/kpis', icon: ChartBarIcon },
     {
       name: 'HR',
       icon: UsersIcon,
@@ -33,7 +32,7 @@ const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
         { name: 'Leaves', href: '/dashboard/leaves', icon: CalendarIcon },
         { name: 'Referrals', href: '/dashboard/referrals', icon: UserGroupIcon },
         { name: 'Documents', href: '/dashboard/documents', icon: FolderIcon },
-        { name: 'Performance', href: '/dashboard/performance', icon: ShieldIcon },
+        { name: 'Discipline', href: '/dashboard/performance', icon: ShieldIcon },
         { name: 'Training', href: '/dashboard/training', icon: AcademicCapIcon },
       ],
     },
@@ -41,6 +40,7 @@ const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
       name: 'Operations',
       icon: TruckIcon,
       items: [
+        { name: 'KPIs', href: '/dashboard/kpis', icon: ChartBarIcon },
         { name: 'Shifts', href: '/dashboard/shifts', icon: ClockIcon },
         { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
         { name: 'Assets', href: '/dashboard/assets', icon: TruckIcon },
@@ -71,11 +71,12 @@ const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
     { name: 'Leaves', href: '/dashboard/leaves', icon: CalendarIcon },
     { name: 'Referrals', href: '/dashboard/referrals', icon: UserGroupIcon },
     { name: 'Documents', href: '/dashboard/documents', icon: FolderIcon },
-    { name: 'Performance', href: '/dashboard/performance', icon: ShieldIcon },
+    { name: 'Discipline', href: '/dashboard/performance', icon: ShieldIcon },
     { name: 'Training', href: '/dashboard/training', icon: AcademicCapIcon },
   ],
   operations: [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { name: 'KPIs', href: '/dashboard/kpis', icon: ChartBarIcon },
     { name: 'Employees', href: '/dashboard/employees', icon: UsersIcon },
     { name: 'Shifts', href: '/dashboard/shifts', icon: ClockIcon },
     { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
@@ -104,7 +105,7 @@ const defaultNavigation: NavItem[] = [
   { name: 'Shifts', href: '/dashboard/shifts', icon: ClockIcon },
   { name: 'Documents', href: '/dashboard/documents', icon: FolderIcon },
   { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
-  { name: 'Performance', href: '/dashboard/performance', icon: ShieldIcon },
+  { name: 'Discipline', href: '/dashboard/performance', icon: ShieldIcon },
   { name: 'Training', href: '/dashboard/training', icon: AcademicCapIcon },
   { name: 'Assets', href: '/dashboard/assets', icon: TruckIcon },
   { name: 'Locations', href: '/dashboard/locations', icon: MapPinIcon },
