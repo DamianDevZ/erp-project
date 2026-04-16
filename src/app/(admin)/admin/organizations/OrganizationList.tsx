@@ -13,6 +13,8 @@ import {
   TableCell,
   Button,
   Spinner,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 
 interface Organization {
@@ -29,6 +31,35 @@ export function OrganizationList() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string | null>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedOrganizations = [...organizations].sort((a, b) => {
+    if (!sortKey || !sortDirection) return 0;
+    
+    let aVal = a[sortKey as keyof Organization];
+    let bVal = b[sortKey as keyof Organization];
+    
+    if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+    if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+    
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+    
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   useEffect(() => {
     fetchOrganizations();
@@ -85,14 +116,14 @@ export function OrganizationList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Created</TableHead>
+              <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Name</SortableTableHead>
+              <SortableTableHead sortKey="slug" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Slug</SortableTableHead>
+              <SortableTableHead sortKey="created_at" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Created</SortableTableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {organizations.map((org) => (
+            {sortedOrganizations.map((org) => (
               <TableRow key={org.id}>
                 <TableCell className="font-medium">{org.name}</TableCell>
                 <TableCell className="text-muted">{org.slug}</TableCell>

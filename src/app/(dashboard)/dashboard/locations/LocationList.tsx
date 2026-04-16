@@ -14,6 +14,8 @@ import {
   TableRow,
   TableCell,
   Spinner,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import type { Location, LocationType } from '@/features/assets';
 
@@ -45,14 +47,43 @@ const TYPE_LABELS: Record<LocationType, string> = {
  */
 export function LocationList({ locations, loading }: LocationListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState<string | null>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const filteredLocations = locations.filter((location) => {
-    const name = location.name?.toLowerCase() || '';
-    const address = location.address?.toLowerCase() || '';
-    const type = location.type?.toLowerCase() || '';
-    const search = searchTerm.toLowerCase();
-    return name.includes(search) || address.includes(search) || type.includes(search);
-  });
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredLocations = locations
+    .filter((location) => {
+      const name = location.name?.toLowerCase() || '';
+      const address = location.address?.toLowerCase() || '';
+      const type = location.type?.toLowerCase() || '';
+      const search = searchTerm.toLowerCase();
+      return name.includes(search) || address.includes(search) || type.includes(search);
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal = a[sortKey as keyof Location];
+      let bVal = b[sortKey as keyof Location];
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -103,11 +134,11 @@ export function LocationList({ locations, loading }: LocationListProps) {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Name</SortableTableHead>
+                <SortableTableHead sortKey="type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                <SortableTableHead sortKey="address" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Address</SortableTableHead>
+                <SortableTableHead sortKey="contact_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Contact</SortableTableHead>
+                <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>

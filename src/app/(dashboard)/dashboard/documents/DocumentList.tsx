@@ -15,6 +15,8 @@ import {
   Spinner,
   Input,
   Badge,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import { 
   EmployeeDocument, 
@@ -32,8 +34,18 @@ export function DocumentList() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<DocumentType | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'employee'>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortKey, setSortKey] = useState<string | null>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchDocuments();
@@ -112,19 +124,28 @@ export function DocumentList() {
       return matchesSearch && matchesType;
     })
     .sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'name':
-          comparison = a.file_name.localeCompare(b.file_name);
-          break;
-        case 'date':
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-        case 'employee':
-          comparison = (a.employee?.full_name || '').localeCompare(b.employee?.full_name || '');
-          break;
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | number | null | undefined;
+      let bVal: string | number | null | undefined;
+      
+      if (sortKey === 'employee') {
+        aVal = a.employee?.full_name;
+        bVal = b.employee?.full_name;
+      } else {
+        aVal = a[sortKey as keyof EmployeeDocument] as string | number | null | undefined;
+        bVal = b[sortKey as keyof EmployeeDocument] as string | number | null | undefined;
       }
-      return sortOrder === 'asc' ? comparison : -comparison;
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
 
   // Check for expiring documents
@@ -190,22 +211,6 @@ export function DocumentList() {
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
-        <select
-          value={`${sortBy}-${sortOrder}`}
-          onChange={(e) => {
-            const [field, order] = e.target.value.split('-');
-            setSortBy(field as 'name' | 'date' | 'employee');
-            setSortOrder(order as 'asc' | 'desc');
-          }}
-          className="rounded-md border border-border bg-input px-3 py-2 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="name-asc">Name (A-Z)</option>
-          <option value="name-desc">Name (Z-A)</option>
-          <option value="date-desc">Newest First</option>
-          <option value="date-asc">Oldest First</option>
-          <option value="employee-asc">Employee (A-Z)</option>
-          <option value="employee-desc">Employee (Z-A)</option>
-        </select>
       </div>
 
       {/* Stats */}
@@ -237,11 +242,11 @@ export function DocumentList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Document</TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Expires</TableHead>
-              <TableHead>Uploaded</TableHead>
+              <SortableTableHead sortKey="file_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Document</SortableTableHead>
+              <SortableTableHead sortKey="employee" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Employee</SortableTableHead>
+              <SortableTableHead sortKey="type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+              <SortableTableHead sortKey="expires_at" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Expires</SortableTableHead>
+              <SortableTableHead sortKey="created_at" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Uploaded</SortableTableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>

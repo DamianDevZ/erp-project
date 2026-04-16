@@ -14,6 +14,8 @@ import {
   Button,
   Spinner,
   Badge,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 
 interface UserProfile {
@@ -36,6 +38,43 @@ export function UserList() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string | null>('full_name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedUsers = [...users].sort((a, b) => {
+    if (!sortKey || !sortDirection) return 0;
+    
+    let aVal: string | null | undefined;
+    let bVal: string | null | undefined;
+    
+    if (sortKey === 'organization') {
+      aVal = a.organization?.name;
+      bVal = b.organization?.name;
+    } else {
+      aVal = a[sortKey as keyof UserProfile] as string | null | undefined;
+      bVal = b[sortKey as keyof UserProfile] as string | null | undefined;
+    }
+    
+    if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+    if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+    
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+    
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -95,15 +134,15 @@ export function UserList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Organization</TableHead>
-              <TableHead>Role</TableHead>
+              <SortableTableHead sortKey="full_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Name</SortableTableHead>
+              <SortableTableHead sortKey="email" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Email</SortableTableHead>
+              <SortableTableHead sortKey="organization" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Organization</SortableTableHead>
+              <SortableTableHead sortKey="role" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Role</SortableTableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
+            {sortedUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   {user.full_name}

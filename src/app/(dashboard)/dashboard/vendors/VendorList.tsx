@@ -13,6 +13,8 @@ import {
   TableHead,
   TableRow,
   TableCell,
+  SortableTableHead,
+  type SortDirection,
   Spinner,
 } from '@/components/ui';
 import type { Vendor, VendorType, VendorStatus } from '@/features/vendors';
@@ -49,16 +51,45 @@ const STATUS_LABELS: Record<VendorStatus, string> = {
 export function VendorList({ vendors, loading }: VendorListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<VendorType | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const filteredVendors = vendors.filter((vendor) => {
-    const name = vendor.name?.toLowerCase() || '';
-    const contact = vendor.contact_name?.toLowerCase() || '';
-    const services = vendor.services_provided?.toLowerCase() || '';
-    const search = searchTerm.toLowerCase();
-    const matchesSearch = name.includes(search) || contact.includes(search) || services.includes(search);
-    const matchesType = filterType === 'all' || vendor.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredVendors = vendors
+    .filter((vendor) => {
+      const name = vendor.name?.toLowerCase() || '';
+      const contact = vendor.contact_name?.toLowerCase() || '';
+      const services = vendor.services_provided?.toLowerCase() || '';
+      const search = searchTerm.toLowerCase();
+      const matchesSearch = name.includes(search) || contact.includes(search) || services.includes(search);
+      const matchesType = filterType === 'all' || vendor.type === filterType;
+      return matchesSearch && matchesType;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal = a[sortKey as keyof Vendor];
+      let bVal = b[sortKey as keyof Vendor];
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -122,11 +153,11 @@ export function VendorList({ vendors, loading }: VendorListProps) {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vendor Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Services</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Vendor Name</SortableTableHead>
+                <SortableTableHead sortKey="type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                <SortableTableHead sortKey="contact_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Contact</SortableTableHead>
+                <SortableTableHead sortKey="services_provided" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Services</SortableTableHead>
+                <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>

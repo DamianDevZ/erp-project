@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Input, Badge, Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui';
+import { Input, Badge, Table, TableHeader, TableBody, TableHead, TableRow, TableCell, SortableTableHead, type SortDirection } from '@/components/ui';
 import {
   type TrainingCourse,
   type EmployeeTraining,
@@ -63,34 +63,94 @@ export function TrainingList({ courses, trainings }: TrainingListProps) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TrainingType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<TrainingStatus | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('due_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   // Filter trainings
-  const filteredTrainings = trainings.filter((training) => {
-    if (search) {
-      const searchLower = search.toLowerCase();
-      const employeeName = training.employee?.full_name?.toLowerCase() ?? '';
-      const courseName = training.course?.name?.toLowerCase() || '';
-      if (!employeeName.includes(searchLower) && !courseName.includes(searchLower)) {
-        return false;
+  const filteredTrainings = trainings
+    .filter((training) => {
+      if (search) {
+        const searchLower = search.toLowerCase();
+        const employeeName = training.employee?.full_name?.toLowerCase() ?? '';
+        const courseName = training.course?.name?.toLowerCase() || '';
+        if (!employeeName.includes(searchLower) && !courseName.includes(searchLower)) {
+          return false;
+        }
       }
-    }
-    if (typeFilter !== 'all' && training.course?.type !== typeFilter) return false;
-    if (statusFilter !== 'all' && training.status !== statusFilter) return false;
-    return true;
-  });
+      if (typeFilter !== 'all' && training.course?.type !== typeFilter) return false;
+      if (statusFilter !== 'all' && training.status !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | number | null | undefined;
+      let bVal: string | number | null | undefined;
+      
+      if (sortKey === 'employee') {
+        aVal = a.employee?.full_name;
+        bVal = b.employee?.full_name;
+      } else if (sortKey === 'course') {
+        aVal = a.course?.name;
+        bVal = b.course?.name;
+      } else if (sortKey === 'type') {
+        aVal = a.course?.type;
+        bVal = b.course?.type;
+      } else {
+        aVal = a[sortKey as keyof EmployeeTraining] as string | number | null | undefined;
+        bVal = b[sortKey as keyof EmployeeTraining] as string | number | null | undefined;
+      }
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   // Filter courses
-  const filteredCourses = courses.filter((course) => {
-    if (search) {
-      const searchLower = search.toLowerCase();
-      if (!course.name.toLowerCase().includes(searchLower) && 
-          !course.provider?.toLowerCase().includes(searchLower)) {
-        return false;
+  const filteredCourses = courses
+    .filter((course) => {
+      if (search) {
+        const searchLower = search.toLowerCase();
+        if (!course.name.toLowerCase().includes(searchLower) && 
+            !course.provider?.toLowerCase().includes(searchLower)) {
+          return false;
+        }
       }
-    }
-    if (typeFilter !== 'all' && course.type !== typeFilter) return false;
-    return true;
-  });
+      if (typeFilter !== 'all' && course.type !== typeFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal = a[sortKey as keyof TrainingCourse];
+      let bVal = b[sortKey as keyof TrainingCourse];
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -181,12 +241,12 @@ export function TrainingList({ courses, trainings }: TrainingListProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Completed</TableHead>
+                <SortableTableHead sortKey="employee" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Employee</SortableTableHead>
+                <SortableTableHead sortKey="course" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Course</SortableTableHead>
+                <SortableTableHead sortKey="type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+                <SortableTableHead sortKey="due_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Due Date</SortableTableHead>
+                <SortableTableHead sortKey="completed_at" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Completed</SortableTableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -282,12 +342,12 @@ export function TrainingList({ courses, trainings }: TrainingListProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Course Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Delivery</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Course Name</SortableTableHead>
+                <SortableTableHead sortKey="type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                <SortableTableHead sortKey="delivery_method" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Delivery</SortableTableHead>
+                <SortableTableHead sortKey="duration_hours" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Duration</SortableTableHead>
+                <SortableTableHead sortKey="provider" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Provider</SortableTableHead>
+                <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>

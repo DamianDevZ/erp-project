@@ -19,7 +19,9 @@ export {
   TableBody, 
   TableRow, 
   TableHead, 
-  TableCell 
+  TableCell,
+  SortableTableHead,
+  type SortDirection,
 } from './table';
 export {
   Select,

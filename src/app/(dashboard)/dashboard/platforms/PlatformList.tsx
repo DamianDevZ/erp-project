@@ -15,6 +15,8 @@ import {
   Spinner,
   Input,
   Badge,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import type { Platform } from '@/features/platforms';
 
@@ -26,6 +28,18 @@ export function PlatformList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<string | null>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchPlatforms();
@@ -51,9 +65,26 @@ export function PlatformList() {
   }
 
   // Filter platforms based on search
-  const filteredPlatforms = platforms.filter((platform) =>
-    platform.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredPlatforms = platforms
+    .filter((platform) =>
+      platform.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal = a[sortKey as keyof Platform];
+      let bVal = b[sortKey as keyof Platform];
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const formatRate = (platform: Platform) => {
     if (!platform.billing_rate) return '—';
@@ -117,11 +148,11 @@ export function PlatformList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact Email</TableHead>
-                <TableHead>Contact Phone</TableHead>
-                <TableHead>Billing Rate</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Name</SortableTableHead>
+                <SortableTableHead sortKey="contact_email" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Contact Email</SortableTableHead>
+                <SortableTableHead sortKey="contact_phone" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Contact Phone</SortableTableHead>
+                <SortableTableHead sortKey="billing_rate" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Billing Rate</SortableTableHead>
+                <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

@@ -13,6 +13,8 @@ import {
   TableHead,
   TableRow,
   TableCell,
+  SortableTableHead,
+  type SortDirection,
   Spinner,
 } from '@/components/ui';
 import type { 
@@ -74,16 +76,53 @@ const OUTCOME_LABELS: Record<CoachingOutcome, string> = {
  */
 export function CoachingList({ coachings, loading }: CoachingListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState<string | null>('coaching_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  const filteredCoachings = coachings.filter((coaching) => {
-    const employeeName = coaching.employee?.full_name?.toLowerCase() || '';
-    const employeeId = coaching.employee?.employee_id?.toLowerCase() || '';
-    const managerNotes = coaching.manager_notes?.toLowerCase() || '';
-    const notes = coaching.notes?.toLowerCase() || '';
-    const search = searchTerm.toLowerCase();
-    return employeeName.includes(search) || employeeId.includes(search) || 
-           managerNotes.includes(search) || notes.includes(search);
-  });
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredCoachings = coachings
+    .filter((coaching) => {
+      const employeeName = coaching.employee?.full_name?.toLowerCase() || '';
+      const employeeId = coaching.employee?.employee_id?.toLowerCase() || '';
+      const managerNotes = coaching.manager_notes?.toLowerCase() || '';
+      const notes = coaching.notes?.toLowerCase() || '';
+      const search = searchTerm.toLowerCase();
+      return employeeName.includes(search) || employeeId.includes(search) || 
+             managerNotes.includes(search) || notes.includes(search);
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | null | undefined;
+      let bVal: string | null | undefined;
+      
+      if (sortKey === 'employee') {
+        aVal = a.employee?.full_name;
+        bVal = b.employee?.full_name;
+      } else {
+        aVal = a[sortKey as keyof typeof a] as string;
+        bVal = b[sortKey as keyof typeof b] as string;
+      }
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-US', {
@@ -141,11 +180,11 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Outcome</TableHead>
+                <SortableTableHead sortKey="coaching_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Date</SortableTableHead>
+                <SortableTableHead sortKey="employee" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Employee</SortableTableHead>
+                <SortableTableHead sortKey="coaching_type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+                <SortableTableHead sortKey="outcome" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Outcome</SortableTableHead>
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>

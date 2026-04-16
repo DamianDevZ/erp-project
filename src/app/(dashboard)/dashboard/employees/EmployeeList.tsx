@@ -11,6 +11,8 @@ import {
   TableRow, 
   TableHead, 
   TableCell,
+  SortableTableHead,
+  type SortDirection,
   Button,
   Spinner,
   Input,
@@ -32,6 +34,18 @@ export function EmployeeList() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('full_name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchEmployees();
@@ -56,14 +70,33 @@ export function EmployeeList() {
     }
   }
 
-  // Filter employees based on search and status
-  const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch = 
-      emp.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      emp.email?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || emp.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Filter and sort employees
+  const filteredEmployees = employees
+    .filter((emp) => {
+      const matchesSearch = 
+        emp.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        emp.email?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || emp.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal = a[sortKey as keyof Employee];
+      let bVal = b[sortKey as keyof Employee];
+      
+      // Handle null/undefined
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      // String comparison
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -126,12 +159,12 @@ export function EmployeeList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Hire Date</TableHead>
+                <SortableTableHead sortKey="full_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Name</SortableTableHead>
+                <SortableTableHead sortKey="email" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Email</SortableTableHead>
+                <SortableTableHead sortKey="phone" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Phone</SortableTableHead>
+                <SortableTableHead sortKey="role" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Role</SortableTableHead>
+                <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+                <SortableTableHead sortKey="hire_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Hire Date</SortableTableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

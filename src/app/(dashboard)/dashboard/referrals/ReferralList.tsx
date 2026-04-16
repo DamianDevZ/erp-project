@@ -15,6 +15,8 @@ import {
   Spinner,
   Input,
   Badge,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import { 
   Referral, 
@@ -40,6 +42,18 @@ export function ReferralList() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReferralStatus | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchReferrals();
@@ -84,14 +98,39 @@ export function ReferralList() {
   }
 
   // Filter referrals based on search and status
-  const filteredReferrals = referrals.filter((ref) => {
-    const matchesSearch = 
-      ref.referred_name?.toLowerCase().includes(search.toLowerCase()) ||
-      ref.referrer?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      ref.referred_phone?.includes(search);
-    const matchesStatus = statusFilter === 'all' || ref.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredReferrals = referrals
+    .filter((ref) => {
+      const matchesSearch = 
+        ref.referred_name?.toLowerCase().includes(search.toLowerCase()) ||
+        ref.referrer?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+        ref.referred_phone?.includes(search);
+      const matchesStatus = statusFilter === 'all' || ref.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | number | null | undefined;
+      let bVal: string | number | null | undefined;
+      
+      if (sortKey === 'referrer') {
+        aVal = a.referrer?.full_name;
+        bVal = b.referrer?.full_name;
+      } else {
+        aVal = a[sortKey as keyof Referral] as string | number | null | undefined;
+        bVal = b[sortKey as keyof Referral] as string | number | null | undefined;
+      }
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -164,11 +203,11 @@ export function ReferralList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Referred By</TableHead>
-              <TableHead>Candidate</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Bonus</TableHead>
+              <SortableTableHead sortKey="referrer" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Referred By</SortableTableHead>
+              <SortableTableHead sortKey="referred_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Candidate</SortableTableHead>
+              <SortableTableHead sortKey="referred_phone" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Contact</SortableTableHead>
+              <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+              <SortableTableHead sortKey="bonus_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Bonus</SortableTableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>

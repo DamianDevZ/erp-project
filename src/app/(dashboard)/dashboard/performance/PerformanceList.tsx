@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Input, Badge, Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui';
+import { Input, Badge, Table, TableHeader, TableBody, TableHead, TableRow, TableCell, SortableTableHead, type SortDirection } from '@/components/ui';
 import {
   type PerformanceDiscipline,
   type DisciplineType,
@@ -51,28 +51,65 @@ export function PerformanceList({ records }: PerformanceListProps) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<DisciplineType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DisciplineStatus | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('incident_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   // Filter records
-  const filteredRecords = records.filter((record) => {
-    // Search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      const employeeName = record.employee?.full_name?.toLowerCase() ?? '';
-      const matches = 
-        employeeName.includes(searchLower) ||
-        record.title.toLowerCase().includes(searchLower) ||
-        record.employee?.employee_id?.toLowerCase().includes(searchLower);
-      if (!matches) return false;
-    }
+  const filteredRecords = records
+    .filter((record) => {
+      // Search filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        const employeeName = record.employee?.full_name?.toLowerCase() ?? '';
+        const matches = 
+          employeeName.includes(searchLower) ||
+          record.title.toLowerCase().includes(searchLower) ||
+          record.employee?.employee_id?.toLowerCase().includes(searchLower);
+        if (!matches) return false;
+      }
 
-    // Type filter
-    if (typeFilter !== 'all' && record.type !== typeFilter) return false;
+      // Type filter
+      if (typeFilter !== 'all' && record.type !== typeFilter) return false;
 
-    // Status filter
-    if (statusFilter !== 'all' && record.status !== statusFilter) return false;
+      // Status filter
+      if (statusFilter !== 'all' && record.status !== statusFilter) return false;
 
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | number | null | undefined;
+      let bVal: string | number | null | undefined;
+      
+      if (sortKey === 'employee') {
+        aVal = a.employee?.full_name;
+        bVal = b.employee?.full_name;
+      } else {
+        aVal = a[sortKey as keyof PerformanceDiscipline] as string | number | null | undefined;
+        bVal = b[sortKey as keyof PerformanceDiscipline] as string | number | null | undefined;
+      }
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -130,12 +167,12 @@ export function PerformanceList({ records }: PerformanceListProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Severity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
+              <SortableTableHead sortKey="employee" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Employee</SortableTableHead>
+              <SortableTableHead sortKey="title" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Title</SortableTableHead>
+              <SortableTableHead sortKey="type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+              <SortableTableHead sortKey="severity" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Severity</SortableTableHead>
+              <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+              <SortableTableHead sortKey="incident_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Date</SortableTableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>

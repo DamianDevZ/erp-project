@@ -64,6 +64,51 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttr
 );
 TableHead.displayName = 'TableHead';
 
+export type SortDirection = 'asc' | 'desc' | null;
+
+interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
+  sortKey: string;
+  currentSort: string | null;
+  currentDirection: SortDirection;
+  onSort: (key: string) => void;
+}
+
+export const SortableTableHead = React.forwardRef<HTMLTableCellElement, SortableTableHeadProps>(
+  ({ className = '', sortKey, currentSort, currentDirection, onSort, children, ...props }, ref) => {
+    const isActive = currentSort === sortKey;
+    
+    return (
+      <th
+        ref={ref}
+        className={`h-12 px-4 text-left align-middle font-medium text-muted cursor-pointer select-none hover:text-heading hover:bg-background transition-colors ${className}`}
+        onClick={() => onSort(sortKey)}
+        {...props}
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          <span className="inline-flex flex-col ml-1">
+            <svg 
+              className={`h-3 w-3 -mb-1 ${isActive && currentDirection === 'asc' ? 'text-primary' : 'text-muted/40'}`} 
+              viewBox="0 0 24 24" 
+              fill="currentColor"
+            >
+              <path d="M12 5l7 7H5z" />
+            </svg>
+            <svg 
+              className={`h-3 w-3 ${isActive && currentDirection === 'desc' ? 'text-primary' : 'text-muted/40'}`} 
+              viewBox="0 0 24 24" 
+              fill="currentColor"
+            >
+              <path d="M12 19l-7-7h14z" />
+            </svg>
+          </span>
+        </div>
+      </th>
+    );
+  }
+);
+SortableTableHead.displayName = 'SortableTableHead';
+
 export const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className = '', ...props }, ref) => (
     <td ref={ref} className={`p-4 align-middle text-body ${className}`} {...props} />

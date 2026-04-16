@@ -14,6 +14,8 @@ import {
   Button,
   Spinner,
   Input,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import { 
   InvoiceStatusBadge,
@@ -34,6 +36,18 @@ export function InvoiceList() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchInvoices();
@@ -59,13 +73,38 @@ export function InvoiceList() {
   }
 
   // Filter invoices
-  const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch = 
-      invoice.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.platform?.name.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredInvoices = invoices
+    .filter((invoice) => {
+      const matchesSearch = 
+        invoice.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+        invoice.platform?.name.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | number | null | undefined;
+      let bVal: string | number | null | undefined;
+      
+      if (sortKey === 'platform') {
+        aVal = a.platform?.name;
+        bVal = b.platform?.name;
+      } else {
+        aVal = a[sortKey as keyof Invoice] as string | number | null | undefined;
+        bVal = b[sortKey as keyof Invoice] as string | number | null | undefined;
+      }
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -136,14 +175,14 @@ export function InvoiceList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Subtotal</TableHead>
-                <TableHead>Tax</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableTableHead sortKey="invoice_number" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Invoice #</SortableTableHead>
+                <SortableTableHead sortKey="platform" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Platform</SortableTableHead>
+                <SortableTableHead sortKey="period_start" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Period</SortableTableHead>
+                <SortableTableHead sortKey="subtotal" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Subtotal</SortableTableHead>
+                <SortableTableHead sortKey="tax_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Tax</SortableTableHead>
+                <SortableTableHead sortKey="total" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Total</SortableTableHead>
+                <SortableTableHead sortKey="due_at" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Due Date</SortableTableHead>
+                <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

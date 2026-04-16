@@ -15,6 +15,8 @@ import {
   Spinner,
   Input,
   Badge,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import { 
   AssetOwnershipBadge,
@@ -33,6 +35,18 @@ export function AssetList() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<AssetOwnership | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchAssets();
@@ -58,14 +72,31 @@ export function AssetList() {
   }
 
   // Filter assets based on search and ownership
-  const filteredAssets = assets.filter((asset) => {
-    const matchesSearch = 
-      asset.name.toLowerCase().includes(search.toLowerCase()) ||
-      asset.license_plate?.toLowerCase().includes(search.toLowerCase()) ||
-      asset.make?.toLowerCase().includes(search.toLowerCase());
-    const matchesOwnership = ownershipFilter === 'all' || asset.ownership === ownershipFilter;
-    return matchesSearch && matchesOwnership;
-  });
+  const filteredAssets = assets
+    .filter((asset) => {
+      const matchesSearch = 
+        asset.name.toLowerCase().includes(search.toLowerCase()) ||
+        asset.license_plate?.toLowerCase().includes(search.toLowerCase()) ||
+        asset.make?.toLowerCase().includes(search.toLowerCase());
+      const matchesOwnership = ownershipFilter === 'all' || asset.ownership === ownershipFilter;
+      return matchesSearch && matchesOwnership;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal = a[sortKey as keyof Asset];
+      let bVal = b[sortKey as keyof Asset];
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -128,13 +159,13 @@ export function AssetList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Asset ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Make / Model / Year</TableHead>
-                <TableHead>License Plate</TableHead>
-                <TableHead>Ownership</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableTableHead sortKey="asset_number" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Asset ID</SortableTableHead>
+                <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Name</SortableTableHead>
+                <SortableTableHead sortKey="category" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Category</SortableTableHead>
+                <SortableTableHead sortKey="make" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Make / Model / Year</SortableTableHead>
+                <SortableTableHead sortKey="license_plate" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>License Plate</SortableTableHead>
+                <SortableTableHead sortKey="ownership" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Ownership</SortableTableHead>
+                <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

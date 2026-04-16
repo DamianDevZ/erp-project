@@ -15,6 +15,8 @@ import {
   Spinner,
   Input,
   Badge,
+  SortableTableHead,
+  type SortDirection,
 } from '@/components/ui';
 import { 
   Leave, 
@@ -41,6 +43,18 @@ export function LeaveList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<LeaveType | 'all'>('all');
+  const [sortKey, setSortKey] = useState<string | null>('start_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     fetchLeaves();
@@ -87,15 +101,40 @@ export function LeaveList() {
   }
 
   // Filter leaves based on search and filters
-  const filteredLeaves = leaves.filter((leave) => {
-    const matchesSearch = 
-      leave.employee?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      leave.employee?.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
-      leave.reason?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || leave.status === statusFilter;
-    const matchesType = typeFilter === 'all' || leave.leave_type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  const filteredLeaves = leaves
+    .filter((leave) => {
+      const matchesSearch = 
+        leave.employee?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+        leave.employee?.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
+        leave.reason?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || leave.status === statusFilter;
+      const matchesType = typeFilter === 'all' || leave.leave_type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      if (!sortKey || !sortDirection) return 0;
+      
+      let aVal: string | number | null | undefined;
+      let bVal: string | number | null | undefined;
+      
+      if (sortKey === 'employee') {
+        aVal = a.employee?.full_name;
+        bVal = b.employee?.full_name;
+      } else {
+        aVal = a[sortKey as keyof Leave] as string | number | null | undefined;
+        bVal = b[sortKey as keyof Leave] as string | number | null | undefined;
+      }
+      
+      if (aVal == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal == null) return sortDirection === 'asc' ? -1 : 1;
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -158,12 +197,12 @@ export function LeaveList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Dates</TableHead>
-              <TableHead>Days</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Status</TableHead>
+              <SortableTableHead sortKey="employee" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Employee</SortableTableHead>
+              <SortableTableHead sortKey="leave_type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+              <SortableTableHead sortKey="start_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Dates</SortableTableHead>
+              <SortableTableHead sortKey="total_days" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Days</SortableTableHead>
+              <SortableTableHead sortKey="reason" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Reason</SortableTableHead>
+              <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
