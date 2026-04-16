@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Button,
   Card,
-  CardContent,
   Input,
   Badge,
   Table,
@@ -120,8 +119,7 @@ export function VendorList({ vendors, loading }: VendorListProps) {
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Vendor Name</TableHead>
@@ -189,7 +187,6 @@ export function VendorList({ vendors, loading }: VendorListProps) {
               )}
             </TableBody>
           </Table>
-        </CardContent>
       </Card>
     </div>
   );

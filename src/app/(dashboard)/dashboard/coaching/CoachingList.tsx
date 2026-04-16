@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Button,
   Card,
-  CardContent,
   Input,
   Badge,
   Table,
@@ -139,8 +138,7 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -206,7 +204,6 @@ export function CoachingList({ coachings, loading }: CoachingListProps) {
               )}
             </TableBody>
           </Table>
-        </CardContent>
       </Card>
     </div>
   );

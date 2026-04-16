@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Button,
   Card,
-  CardContent,
   Input,
   Badge,
   Table,
@@ -101,8 +100,7 @@ export function LocationList({ locations, loading }: LocationListProps) {
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -165,7 +163,6 @@ export function LocationList({ locations, loading }: LocationListProps) {
               )}
             </TableBody>
           </Table>
-        </CardContent>
       </Card>
     </div>
   );
