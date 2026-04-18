@@ -37,6 +37,10 @@ export interface PerformanceDiscipline {
   status: DisciplineStatus;
   severity: SeverityLevel;
   
+  // Vehicle-linked discipline
+  vehicle_id: string | null;
+  vehicle_misuse_type: VehicleMisuseType | null;
+  
   // Details
   title: string;
   description: string | null;
@@ -117,6 +121,60 @@ export const DISCIPLINE_STATUS_COLORS: Record<DisciplineStatus, string> = {
   resolved: 'bg-green-100 text-green-800',
   escalated: 'bg-red-100 text-red-800',
   closed: 'bg-gray-100 text-gray-800',
+};
+
+// Vehicle-linked discipline types
+export type DisciplineTriggerType =
+  | 'maintenance_delay'
+  | 'unauthorized_use'
+  | 'damage_report'
+  | 'speeding'
+  | 'harsh_driving'
+  | 'accident'
+  | 'fuel_theft';
+
+export type VehicleMisuseType =
+  | 'unauthorized_personal_use'
+  | 'speeding'
+  | 'reckless_driving'
+  | 'parking_violation'
+  | 'traffic_violation'
+  | 'accident_at_fault'
+  | 'damage_unreported'
+  | 'fuel_misuse';
+
+export interface VehicleDisciplineTrigger {
+  id: string;
+  organization_id: string;
+  trigger_type: DisciplineTriggerType;
+  severity_level: SeverityLevel;
+  auto_create_record: boolean;
+  default_discipline_type: DisciplineType;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const DISCIPLINE_TRIGGER_LABELS: Record<DisciplineTriggerType, string> = {
+  maintenance_delay: 'Maintenance Delay',
+  unauthorized_use: 'Unauthorized Use',
+  damage_report: 'Damage Report',
+  speeding: 'Speeding',
+  harsh_driving: 'Harsh Driving',
+  accident: 'Accident',
+  fuel_theft: 'Fuel Theft',
+};
+
+export const VEHICLE_MISUSE_LABELS: Record<VehicleMisuseType, string> = {
+  unauthorized_personal_use: 'Unauthorized Personal Use',
+  speeding: 'Speeding',
+  reckless_driving: 'Reckless Driving',
+  parking_violation: 'Parking Violation',
+  traffic_violation: 'Traffic Violation',
+  accident_at_fault: 'Accident (At Fault)',
+  damage_unreported: 'Damage Unreported',
+  fuel_misuse: 'Fuel Misuse',
 };
 
 export const SEVERITY_LABELS: Record<SeverityLevel, string> = {

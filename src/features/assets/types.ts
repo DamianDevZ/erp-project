@@ -253,3 +253,315 @@ export interface CreateAssetMovementInput {
   movement_date?: string;
   notes?: string;
 }
+
+// ============================================
+// Asset Lifecycle & Vendor Types (T-071 to T-077)
+// ============================================
+
+export type AssetLifecycleStage = 
+  | 'procurement'
+  | 'pre_delivery'
+  | 'active'
+  | 'maintenance'
+  | 'repair'
+  | 'idle'
+  | 'disposal_pending'
+  | 'disposed';
+
+export type DisposalMethod = 
+  | 'sold'
+  | 'scrapped'
+  | 'donated'
+  | 'returned_to_lessor'
+  | 'trade_in'
+  | 'written_off';
+
+export type VendorCategory = 
+  | 'maintenance'
+  | 'fuel'
+  | 'insurance'
+  | 'parts'
+  | 'rental'
+  | 'equipment'
+  | 'services'
+  | 'other';
+
+export type VendorRating = 
+  | 'excellent'
+  | 'good'
+  | 'average'
+  | 'below_average'
+  | 'poor';
+
+// === Asset Lifecycle Events ===
+
+export interface AssetLifecycleEvent {
+  id: string;
+  organization_id: string;
+  asset_id: string;
+  
+  event_date: string;
+  event_type: string;
+  
+  previous_stage?: AssetLifecycleStage;
+  new_stage?: AssetLifecycleStage;
+  
+  event_value?: number;
+  accumulated_depreciation?: number;
+  book_value?: number;
+  
+  description?: string;
+  reference_number?: string;
+  related_document_path?: string;
+  
+  performed_by?: string;
+  
+  metadata?: Record<string, unknown>;
+  notes?: string;
+  created_at: string;
+}
+
+export interface CreateLifecycleEventInput {
+  asset_id: string;
+  event_date: string;
+  event_type: string;
+  previous_stage?: AssetLifecycleStage;
+  new_stage?: AssetLifecycleStage;
+  event_value?: number;
+  description?: string;
+  reference_number?: string;
+  performed_by?: string;
+  notes?: string;
+}
+
+// === Asset Disposal ===
+
+export interface AssetDisposal {
+  id: string;
+  organization_id: string;
+  asset_id: string;
+  
+  disposal_date: string;
+  disposal_method: DisposalMethod;
+  
+  book_value_at_disposal?: number;
+  disposal_amount?: number;
+  gain_loss?: number; // Generated column
+  
+  buyer_name?: string;
+  buyer_contact?: string;
+  
+  disposal_reason?: string;
+  condition_at_disposal?: string;
+  
+  sale_agreement_path?: string;
+  transfer_documents?: Array<{ name: string; path: string }>;
+  
+  requested_by?: string;
+  approved_by?: string;
+  approved_at?: string;
+  
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DisposeAssetInput {
+  asset_id: string;
+  disposal_date: string;
+  disposal_method: DisposalMethod;
+  disposal_value: number;
+  disposal_reason: string;
+  buyer_name?: string;
+  buyer_contact?: string;
+  condition_at_disposal?: string;
+  requested_by?: string;
+}
+
+// === Asset Depreciation ===
+
+export interface AssetDepreciation {
+  acquisition_cost: number;
+  salvage_value: number;
+  useful_life_months: number;
+  months_used: number;
+  monthly_depreciation: number;
+  accumulated_depreciation: number;
+  book_value: number;
+}
+
+// === Vendor Types ===
+
+export interface Vendor {
+  id: string;
+  organization_id: string;
+  vendor_code?: string;
+  name: string;
+  trade_name?: string;
+  category?: VendorCategory;
+  subcategory?: string;
+  
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  mobile?: string;
+  website?: string;
+  
+  address?: string;
+  address_line2?: string;
+  city?: string;
+  emirate?: string;
+  country: string;
+  postal_code?: string;
+  
+  trade_license_number?: string;
+  trade_license_expiry?: string;
+  tax_id?: string;
+  vat_registration_number?: string;
+  
+  bank_name?: string;
+  bank_account_number?: string;
+  iban?: string;
+  swift_code?: string;
+  
+  payment_terms?: string;
+  payment_terms_days: number;
+  credit_limit?: number;
+  
+  rating?: VendorRating;
+  rating_notes?: string;
+  last_rating_date?: string;
+  
+  status: string;
+  approved_by?: string;
+  approved_at?: string;
+  blacklisted_reason?: string;
+  is_preferred: boolean;
+  
+  services_provided?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface VendorService {
+  id: string;
+  vendor_id: string;
+  
+  service_name: string;
+  service_description?: string;
+  
+  base_price?: number;
+  price_unit?: string;
+  
+  turnaround_time_hours?: number;
+  warranty_days?: number;
+  
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface VendorPerformanceRecord {
+  id: string;
+  organization_id: string;
+  vendor_id: string;
+  
+  record_period: string;
+  
+  orders_count: number;
+  total_spend: number;
+  
+  on_time_deliveries: number;
+  late_deliveries: number;
+  avg_delivery_days?: number;
+  
+  quality_issues: number;
+  returns_count: number;
+  warranty_claims: number;
+  
+  price_variance_percent?: number;
+  
+  on_time_rate?: number;
+  quality_rate?: number;
+  overall_score?: number;
+  
+  notes?: string;
+  created_at: string;
+}
+
+export interface VendorPerformanceSummary {
+  vendor_id: string;
+  organization_id: string;
+  vendor_code?: string;
+  vendor_name: string;
+  category?: VendorCategory;
+  status: string;
+  rating?: VendorRating;
+  is_preferred: boolean;
+  
+  periods_tracked: number;
+  total_orders: number;
+  total_spend: number;
+  avg_on_time_rate?: number;
+  avg_quality_rate?: number;
+  avg_score?: number;
+  latest_score?: number;
+}
+
+export interface CreateVendorInput {
+  vendor_code?: string;
+  name: string;
+  trade_name?: string;
+  category: VendorCategory;
+  subcategory?: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  mobile?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  emirate?: string;
+  country?: string;
+  trade_license_number?: string;
+  trade_license_expiry?: string;
+  vat_registration_number?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  iban?: string;
+  payment_terms_days?: number;
+  credit_limit?: number;
+  services_provided?: string;
+  notes?: string;
+}
+
+export interface VendorFilters {
+  organization_id: string;
+  category?: VendorCategory;
+  status?: string;
+  rating?: VendorRating;
+  is_preferred?: boolean;
+  search?: string;
+}
+
+// === Vehicle Cost Summary ===
+
+export interface VehicleCostSummary {
+  asset_id: string;
+  organization_id: string;
+  vehicle_name: string;
+  license_plate?: string;
+  ownership: AssetOwnership;
+  
+  acquisition_date?: string;
+  acquisition_cost?: number;
+  current_book_value?: number;
+  
+  fuel_cost_30d: number;
+  maintenance_cost_30d: number;
+  insurance_cost_monthly: number;
+  violation_cost_30d: number;
+  
+  total_cost_30d?: number;
+}

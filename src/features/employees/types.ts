@@ -17,6 +17,34 @@ export type RiderCategory = 'company_vehicle_rider' | 'own_vehicle_rider';
 /** Compliance status — auto-calculated based on document expiries */
 export type ComplianceStatus = 'compliant' | 'expiring_soon' | 'non_compliant' | 'blocked';
 
+/** Onboarding step — workflow stages for new riders (T-019) */
+export type OnboardingStep =
+  | 'application_submitted'
+  | 'documents_pending'
+  | 'documents_uploaded'
+  | 'documents_review'
+  | 'documents_approved'
+  | 'training_pending'
+  | 'training_completed'
+  | 'vehicle_assignment'
+  | 'final_approval'
+  | 'activated'
+  | 'rejected';
+
+export const ONBOARDING_STEP_LABELS: Record<OnboardingStep, string> = {
+  application_submitted: 'Application Submitted',
+  documents_pending: 'Documents Pending',
+  documents_uploaded: 'Documents Uploaded',
+  documents_review: 'Under Review',
+  documents_approved: 'Documents Approved',
+  training_pending: 'Training Pending',
+  training_completed: 'Training Completed',
+  vehicle_assignment: 'Vehicle Assignment',
+  final_approval: 'Final Approval',
+  activated: 'Activated',
+  rejected: 'Rejected',
+};
+
 export const RIDER_CATEGORY_LABELS: Record<RiderCategory, string> = {
   company_vehicle_rider: 'Company Vehicle Rider',
   own_vehicle_rider: 'Own Vehicle Rider',
@@ -77,6 +105,9 @@ export interface Employee {
   visa_expiry: string | null;
   rider_category: RiderCategory | null;
   compliance_status: ComplianceStatus;
+  // Onboarding workflow (T-019)
+  onboarding_step: OnboardingStep | null;
+  is_onboarding: boolean;
   // Rider lifecycle
   onboarding_completed_at: string | null;
   activation_date: string | null;

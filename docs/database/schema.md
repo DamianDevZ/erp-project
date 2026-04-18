@@ -558,3 +558,63 @@ Accidents, damage events, and incidents.
 | `requires_bag` | BOOLEAN | Rider needs delivery bag |
 | `orders_import_method` | TEXT | manual, api, csv |
 | `deleted_at` | TIMESTAMPTZ | Soft delete timestamp |
+
+---
+
+### `payroll`
+Pay periods and calculations for riders.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `payroll_number` | TEXT | Pay period reference |
+| `period_start` | DATE | Period start date |
+| `period_end` | DATE | Period end date |
+| `payment_date` | DATE | When to pay |
+| `employee_id` | UUID | FK → `employees` |
+| `rider_category` | `rider_category` | Snapshot at calculation time |
+| `base_salary` | DECIMAL | Fixed base salary |
+| `orders_count` | INTEGER | Orders completed |
+| `order_earnings` | DECIMAL | Earnings from orders |
+| `incentives` | DECIMAL | Platform incentives |
+| `tips` | DECIMAL | Tips received |
+| `vehicle_allowance` | DECIMAL | Own-bike allowance (T-026) |
+| `gross_pay` | DECIMAL | Total before deductions |
+| `vehicle_deduction` | DECIMAL | Company-bike deduction (T-027) |
+| `damage_deduction` | DECIMAL | Damage recovery |
+| `advance_recovery` | DECIMAL | Advance payback |
+| `total_deductions` | DECIMAL | All deductions sum |
+| `net_pay` | DECIMAL | Final pay amount |
+| `status` | `payroll_status` | draft, calculated, approved, processing, paid |
+| `approved_by` | UUID | FK → `user_profiles` |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+### `finance_ledger`
+Cost allocation and financial tracking for P&L analysis.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `transaction_date` | DATE | When transaction occurred |
+| `transaction_type` | `ledger_transaction_type` | revenue, payroll, vehicle_cost, etc. |
+| `category` | TEXT | Sub-category for reporting |
+| `description` | TEXT | Transaction description |
+| `amount` | DECIMAL | Amount (positive=expense, negative=income) |
+| `currency` | TEXT | Default 'BHD' |
+| `platform_id` | UUID | FK → `platforms` (for allocation) |
+| `contract_id` | UUID | FK → `contracts` (for allocation) |
+| `employee_id` | UUID | FK → `employees` (for allocation) |
+| `asset_id` | UUID | FK → `assets` (for allocation) |
+| `vendor_id` | UUID | FK → `vendors` (for allocation) |
+| `vehicle_source_type` | TEXT | company_owned, rental, employee_owned (T-073) |
+| `source_table` | TEXT | Source record table |
+| `source_id` | UUID | Source record ID |
+| `accounting_period` | TEXT | YYYY-MM format |
+| `is_posted` | BOOLEAN | Whether posted to accounting |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |

@@ -10,15 +10,15 @@
 | Metric | Count |
 |--------|-------|
 | Total Tasks | 110 (109 + 36-1) |
-| ✅ Done | 15 |
-| ⚠️ Partial | 2 |
-| 🔧 Ready to Build | ~80 |
+| ✅ Done | 17 |
+| ⚠️ Partial | 1 |
+| 🔧 Ready to Build | ~79 |
 | 🔌 Needs Integration | 10 |
 | ❓ Needs Info | 10 |
 
 ### Progress
 
-- **Module 1: Data Model** - 16/18 complete ✅
+- **Module 1: Data Model** - 17/18 complete ✅
 - **Module 2: HR** - 2/14 complete
 - **Module 3: Operations** - 2/15 complete
 - **Module 4: Fleet** - 1/15 complete
@@ -78,8 +78,8 @@ Three ownership models - maps to existing `assets.ownership` enum:
 | T-011 | Create Attendance entity | Critical | ✅ Done | Created attendance with GPS check-in/out (migration 006) |
 | T-012 | Create Orders entity | Critical | ✅ Done | Created orders table for aggregator imports (migration 007) |
 | T-013 | Create Maintenance_Events entity | Critical | ✅ Done | Created maintenance_events with cost tracking (migration 008) |
-| T-014 | Create Payroll entity | Critical | 🔧 Can Build | rider_id, period_start, period_end, fixed_pay, order_pay, allowances, deductions, advances, net_pay |
-| T-015 | Create Finance_Ledger / cost allocation | High | 🔧 Can Build | transaction_type, vehicle_id, rider_id, supplier_id, aggregator_id, amount, category |
+| T-014 | Create Payroll entity | Critical | ✅ Done | Created payroll table with earnings/deductions (migration 010) |
+| T-015 | Create Finance_Ledger / cost allocation | High | ✅ Done | Created finance_ledger for cost tracking (migration 011) |
 | T-016 | Create Incidents/accidents entity | High | ✅ Done | Created incidents table (migration 009) |
 | T-017 | Define master status enums | High | ✅ Done | Added vehicle_status, compliance_status, attendance_status, order_status |
 | T-018 | Design user roles and permission matrix | High | ⚠️ Partial | Have role field. Need granular permissions per module |
