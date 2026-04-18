@@ -81,6 +81,27 @@ export interface AssetMovementWithRelations extends AssetMovement {
   performed_by_user?: { full_name: string } | null;
 }
 
+/** Vehicle operational status */
+export type VehicleStatus = 'available' | 'assigned' | 'maintenance' | 'off_road' | 'disposed';
+
+/** Compliance status for vehicles */
+export type AssetComplianceStatus = 'compliant' | 'expiring_soon' | 'non_compliant' | 'blocked';
+
+export const VEHICLE_STATUS_LABELS: Record<VehicleStatus, string> = {
+  available: 'Available',
+  assigned: 'Assigned',
+  maintenance: 'In Maintenance',
+  off_road: 'Off Road',
+  disposed: 'Disposed',
+};
+
+export const ASSET_COMPLIANCE_STATUS_LABELS: Record<AssetComplianceStatus, string> = {
+  compliant: 'Compliant',
+  expiring_soon: 'Expiring Soon',
+  non_compliant: 'Non-Compliant',
+  blocked: 'Blocked',
+};
+
 /**
  * Asset entity.
  */
@@ -100,12 +121,36 @@ export interface Asset {
   vin: string | null;
   assigned_employee_id: string | null;
   owner_employee_id: string | null;
-  // New location tracking fields
+  // Location tracking
   current_location_id: string | null;
   is_active: boolean;
+  // Vehicle compliance fields (T-003)
+  registration_number: string | null;
+  registration_expiry: string | null;
+  insurance_policy_number: string | null;
+  insurance_expiry: string | null;
+  inspection_date: string | null;
+  inspection_expiry: string | null;
+  // Vehicle status
+  vehicle_status: VehicleStatus;
+  compliance_status: AssetComplianceStatus;
+  // Owned vehicle fields
+  purchase_date: string | null;
+  purchase_price: number | null;
+  expected_life_years: number | null;
+  disposal_date: string | null;
+  disposal_value: number | null;
+  // Operational data
+  odometer_reading: number | null;
+  last_odometer_date: string | null;
+  next_service_km: number | null;
+  next_service_date: string | null;
+  // Spare pool flag
+  is_spare: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 /**

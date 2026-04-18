@@ -11,6 +11,24 @@ export type EmployeeRole = 'rider' | 'supervisor' | 'manager' | 'hr';
 /** Salary payment type */
 export type SalaryType = 'hourly' | 'daily' | 'weekly' | 'monthly';
 
+/** Rider category — affects pay structure and deductions */
+export type RiderCategory = 'company_vehicle_rider' | 'own_vehicle_rider';
+
+/** Compliance status — auto-calculated based on document expiries */
+export type ComplianceStatus = 'compliant' | 'expiring_soon' | 'non_compliant' | 'blocked';
+
+export const RIDER_CATEGORY_LABELS: Record<RiderCategory, string> = {
+  company_vehicle_rider: 'Company Vehicle Rider',
+  own_vehicle_rider: 'Own Vehicle Rider',
+};
+
+export const COMPLIANCE_STATUS_LABELS: Record<ComplianceStatus, string> = {
+  compliant: 'Compliant',
+  expiring_soon: 'Expiring Soon',
+  non_compliant: 'Non-Compliant',
+  blocked: 'Blocked',
+};
+
 /**
  * Employee entity as stored in the database.
  */
@@ -50,11 +68,25 @@ export interface Employee {
   // Compensation
   salary: number | null;
   salary_type: SalaryType | null;
+  // Rider-specific fields (T-002)
+  license_number: string | null;
+  license_type: string | null;
+  license_expiry: string | null;
+  visa_number: string | null;
+  visa_type: string | null;
+  visa_expiry: string | null;
+  rider_category: RiderCategory | null;
+  compliance_status: ComplianceStatus;
+  // Rider lifecycle
+  onboarding_completed_at: string | null;
+  activation_date: string | null;
+  deactivation_date: string | null;
   // Notes
   notes: string | null;
   // Timestamps
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 /**
@@ -88,6 +120,14 @@ export interface CreateEmployeeInput {
   iban?: string;
   salary?: number;
   salary_type?: SalaryType;
+  // Rider-specific fields
+  license_number?: string;
+  license_type?: string;
+  license_expiry?: string;
+  visa_number?: string;
+  visa_type?: string;
+  visa_expiry?: string;
+  rider_category?: RiderCategory;
   notes?: string;
 }
 

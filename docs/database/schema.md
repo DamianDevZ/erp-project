@@ -12,8 +12,20 @@ This document describes all tables, their relationships, and purpose.
 |------|--------|---------|
 | `employee_status` | `pending`, `active`, `past` | employees |
 | `employee_role` | `rider`, `supervisor`, `manager`, `hr` | employees |
+| `rider_category` | `company_vehicle_rider`, `own_vehicle_rider` | employees |
+| `compliance_status` | `compliant`, `expiring_soon`, `non_compliant`, `blocked` | employees, assets |
 | `asset_ownership` | `company_owned`, `employee_owned`, `rental` | assets |
 | `asset_type` | `vehicle`, `equipment`, `other` | assets |
+| `vehicle_status` | `available`, `assigned`, `maintenance`, `off_road`, `disposed` | assets |
+| `contract_status` | `draft`, `active`, `expired`, `terminated` | contracts |
+| `billing_model` | `per_order`, `per_hour`, `per_shift`, `fixed_monthly`, `hybrid` | contracts |
+| `attendance_status` | `checked_in`, `checked_out`, `no_show`, `late`, `early_leave`, `approved`, `disputed` | attendance |
+| `order_status` | `pending`, `completed`, `cancelled`, `returned`, `disputed` | orders |
+| `incident_type` | `accident`, `theft`, `vandalism`, `breakdown`, `damage_rider`, `damage_third_party`, `violation`, `other` | incidents |
+| `incident_severity` | `minor`, `moderate`, `major`, `total` | incidents |
+| `responsibility_party` | `rider`, `third_party`, `company`, `unknown`, `shared` | incidents |
+| `maintenance_type` | `scheduled_service`, `unscheduled_repair`, `accident_repair`, `inspection`, `cleaning`, `modification` | maintenance_events |
+| `maintenance_paid_by` | `company`, `supplier`, `rider`, `insurance`, `warranty`, `pending` | maintenance_events |
 
 ---
 
@@ -318,3 +330,231 @@ SELECT public.get_user_organization_id();
 ```
 
 All queries are automatically scoped to the user's organization via RLS policies.
+
+---
+
+## New Tables (3PL Enhancement)
+
+> Added to support the 3PL mixed-fleet operations requirements.
+
+### `contracts`
+Service contracts with clients/aggregators defining commercial terms.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `platform_id` | UUID | FK → `platforms` |
+| `contract_number` | TEXT | Contract reference |
+| `contract_name` | TEXT | Display name |
+| `start_date` | DATE | Contract start |
+| `end_date` | DATE | Contract end (null = open-ended) |
+| `status` | `contract_status` | draft, active, expired, terminated |
+| `billing_model` | `billing_model` | per_order, per_hour, per_shift, fixed_monthly, hybrid |
+| `rate_per_order` | DECIMAL | Rate per order (if applicable) |
+| `rate_per_hour` | DECIMAL | Rate per hour (if applicable) |
+| `incentive_share_percent` | DECIMAL | % of platform incentives we keep |
+| `billing_frequency` | TEXT | weekly, biweekly, monthly |
+| `payment_due_days` | INTEGER | Days after invoice to pay |
+| `currency` | TEXT | Default 'BHD' |
+| `service_zones` | TEXT | Comma-separated zone names |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+### `rider_vehicle_assignments`
+History of rider-to-vehicle assignments with handover tracking.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `employee_id` | UUID | FK → `employees` |
+| `asset_id` | UUID | FK → `assets` |
+| `platform_id` | UUID | FK → `platforms` (optional) |
+| `start_date` | DATE | Assignment start |
+| `end_date` | DATE | Assignment end (null = active) |
+| `assignment_type` | TEXT | primary, temporary, replacement |
+| `assignment_reason` | TEXT | Why assigned |
+| `handover_condition` | TEXT | Condition notes at handover |
+| `handover_odometer` | INTEGER | Odometer at handover |
+| `return_condition` | TEXT | Condition at return |
+| `return_odometer` | INTEGER | Odometer at return |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+### `attendance`
+Rider attendance with GPS check-in/out.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `employee_id` | UUID | FK → `employees` |
+| `shift_id` | UUID | FK → `shifts` (optional) |
+| `platform_id` | UUID | FK → `platforms` (optional) |
+| `attendance_date` | DATE | Date of attendance |
+| `check_in_time` | TIMESTAMPTZ | When checked in |
+| `check_in_latitude` | DECIMAL | GPS latitude |
+| `check_in_longitude` | DECIMAL | GPS longitude |
+| `check_in_method` | TEXT | manual, gps, qr_code, biometric |
+| `check_out_time` | TIMESTAMPTZ | When checked out |
+| `worked_hours` | DECIMAL | Total hours worked |
+| `status` | `attendance_status` | checked_in, checked_out, no_show, etc. |
+| `late_minutes` | INTEGER | Minutes late |
+| `requires_approval` | BOOLEAN | Needs supervisor approval |
+| `approved_by` | UUID | FK → `user_profiles` |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+### `orders`
+Delivery orders imported from aggregators.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `external_order_id` | TEXT | Order ID from aggregator |
+| `platform_id` | UUID | FK → `platforms` |
+| `contract_id` | UUID | FK → `contracts` (optional) |
+| `employee_id` | UUID | FK → `employees` |
+| `asset_id` | UUID | FK → `assets` |
+| `order_date` | DATE | Date of delivery |
+| `order_type` | TEXT | delivery, pickup, express, scheduled |
+| `distance_km` | DECIMAL | Distance traveled |
+| `base_payout` | DECIMAL | Base delivery fee we receive |
+| `incentive_payout` | DECIMAL | Bonus/incentive amount |
+| `tip_amount` | DECIMAL | Tip received |
+| `total_revenue` | DECIMAL | Total revenue |
+| `platform_commission` | DECIMAL | Platform commission |
+| `net_revenue` | DECIMAL | Net revenue |
+| `status` | `order_status` | pending, completed, cancelled, etc. |
+| `reconciliation_status` | TEXT | pending, matched, mismatched |
+| `payroll_processed` | BOOLEAN | Included in payroll |
+| `invoice_processed` | BOOLEAN | Included in invoice |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+### `maintenance_events`
+Vehicle maintenance, repair, and service records.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `asset_id` | UUID | FK → `assets` |
+| `incident_id` | UUID | FK → `incidents` (if caused by accident) |
+| `event_type` | `maintenance_type` | scheduled_service, unscheduled_repair, etc. |
+| `description` | TEXT | What was done |
+| `vendor_id` | UUID | FK → `vendors` |
+| `reported_date` | DATE | When reported |
+| `completed_at` | TIMESTAMPTZ | When completed |
+| `downtime_hours` | DECIMAL | Hours out of service |
+| `actual_cost` | DECIMAL | Total cost |
+| `paid_by` | `maintenance_paid_by` | company, supplier, rider, etc. |
+| `recovery_amount` | DECIMAL | Amount recovered |
+| `recovery_status` | TEXT | pending, partial, recovered |
+| `status` | TEXT | reported, in_progress, completed |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+### `incidents`
+Accidents, damage events, and incidents.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK → `organizations` |
+| `incident_number` | TEXT | Reference number |
+| `asset_id` | UUID | FK → `assets` |
+| `employee_id` | UUID | FK → `employees` |
+| `incident_type` | `incident_type` | accident, theft, vandalism, etc. |
+| `severity` | `incident_severity` | minor, moderate, major, total |
+| `incident_date` | DATE | When it happened |
+| `incident_location` | TEXT | Where it happened |
+| `description` | TEXT | What happened |
+| `responsibility` | `responsibility_party` | rider, third_party, company, unknown |
+| `photos_uploaded` | BOOLEAN | Evidence photos uploaded |
+| `police_report_filed` | BOOLEAN | Police report exists |
+| `insurance_claim_filed` | BOOLEAN | Insurance claim submitted |
+| `total_cost` | DECIMAL | Total cost of incident |
+| `recovery_status` | TEXT | pending, partial, recovered, written_off |
+| `vehicle_downtime_days` | INTEGER | Days vehicle was out |
+| `status` | TEXT | reported, under_investigation, resolved, closed |
+| `created_at` | TIMESTAMPTZ | Record created |
+| `updated_at` | TIMESTAMPTZ | Last update |
+
+---
+
+## Enhanced Employees Fields
+
+> New fields added to `employees` table for rider management.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `license_number` | TEXT | Driver's license number |
+| `license_type` | TEXT | motorcycle, car, both |
+| `license_expiry` | DATE | License expiration date |
+| `visa_number` | TEXT | Work visa number |
+| `visa_type` | TEXT | Visa category |
+| `visa_expiry` | DATE | Visa expiration date |
+| `rider_category` | `rider_category` | company_vehicle_rider, own_vehicle_rider |
+| `compliance_status` | `compliance_status` | Auto-calculated based on doc expiries |
+| `onboarding_completed_at` | TIMESTAMPTZ | When onboarding finished |
+| `activation_date` | DATE | When rider can start working |
+| `deactivation_date` | DATE | When rider stopped working |
+| `deleted_at` | TIMESTAMPTZ | Soft delete timestamp |
+
+---
+
+## Enhanced Assets Fields
+
+> New fields added to `assets` table for vehicle management.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `registration_number` | TEXT | Vehicle registration |
+| `registration_expiry` | DATE | Registration expiration |
+| `insurance_policy_number` | TEXT | Insurance policy reference |
+| `insurance_expiry` | DATE | Insurance expiration |
+| `inspection_date` | DATE | Last inspection |
+| `inspection_expiry` | DATE | Inspection due date |
+| `vehicle_status` | `vehicle_status` | available, assigned, maintenance, etc. |
+| `compliance_status` | `compliance_status` | Auto-calculated |
+| `purchase_date` | DATE | For owned vehicles |
+| `purchase_price` | DECIMAL | Purchase cost |
+| `expected_life_years` | INTEGER | Expected useful life |
+| `odometer_reading` | INTEGER | Current odometer |
+| `next_service_km` | INTEGER | Service due at km |
+| `next_service_date` | DATE | Service due date |
+| `is_spare` | BOOLEAN | In spare/standby pool |
+| `deleted_at` | TIMESTAMPTZ | Soft delete timestamp |
+
+---
+
+## Enhanced Platforms Fields
+
+> New fields added to `platforms` table for aggregator integration.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `api_base_url` | TEXT | Aggregator API URL |
+| `api_key_encrypted` | TEXT | Encrypted API key |
+| `integration_status` | TEXT | not_configured, configured, active, error |
+| `commission_rate` | DECIMAL | Platform's commission % |
+| `incentive_share_rate` | DECIMAL | Our share of incentives |
+| `payment_terms` | TEXT | weekly, biweekly, monthly |
+| `payment_delay_days` | INTEGER | Days after period end |
+| `requires_uniform` | BOOLEAN | Rider needs uniform |
+| `requires_bag` | BOOLEAN | Rider needs delivery bag |
+| `orders_import_method` | TEXT | manual, api, csv |
+| `deleted_at` | TIMESTAMPTZ | Soft delete timestamp |
