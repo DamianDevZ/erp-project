@@ -10,14 +10,26 @@
 | Metric | Count |
 |--------|-------|
 | Total Tasks | 110 (109 + 36-1) |
-| Phase 1 - Foundation | 32 tasks |
-| Phase 2 - Core Operations | 35 tasks |
-| Phase 3 - Finance & Control | 22 tasks |
-| Phase 4 - Integrations & BI | 21 tasks |
+| ✅ Done | 15 |
+| ⚠️ Partial | 2 |
+| 🔧 Ready to Build | ~80 |
+| 🔌 Needs Integration | 10 |
+| ❓ Needs Info | 10 |
+
+### Progress
+
+- **Module 1: Data Model** - 16/18 complete ✅
+- **Module 2: HR** - 2/14 complete
+- **Module 3: Operations** - 2/15 complete
+- **Module 4: Fleet** - 1/15 complete
+- **Module 5: Finance** - 1/15 complete
+- **Module 6: Compliance** - 1/12 complete
+- **Module 7: Integrations** - 1/10 complete
+- **Module 8: BI & Reports** - 0/11 complete
 
 ### Status Key
 
-- ✅ **Done** - Already built in our system
+- ✅ **Done** - Built and ready
 - ⚠️ **Partial** - Exists but needs additions
 - 🔧 **Can Build** - Ready to implement
 - 🔌 **Needs Integration** - Requires external API/system
@@ -32,20 +44,20 @@
 |--------------|------------------|-------|
 | Riders | Employees | Keep as employees, add rider-specific fields |
 | Vehicles | Assets | Add vehicle-specific fields, keep generic asset support |
-| Aggregators | N/A | New table - Talabat, Jahez, Keeta |
+| Aggregators | Platforms | Same as Clients - use platforms table |
 | Clients | Platforms | Good match |
-| Orders | N/A | New table - delivery orders from aggregators |
-| Attendance | N/A | New table - GPS check-in/out |
-| Contracts | N/A | New table - rate/billing terms |
-| Payroll | N/A | New table - pay calculation |
-| Maintenance_Events | N/A | New table - service/repair |
+| Orders | Orders | New table created |
+| Attendance | Attendance | New table created |
+| Contracts | Contracts | New table created |
+| Payroll | N/A | New table - pay calculation (next sprint) |
+| Maintenance_Events | Maintenance_Events | New table created |
 
 ### Vehicle Source Types
 
-Three ownership models used throughout:
-- `OWNED_BY_COMPANY` - Company purchased
-- `RENTED_BY_COMPANY` - Rented from suppliers  
-- `RIDER_OWNED` - Rider's own bike
+Three ownership models - maps to existing `assets.ownership` enum:
+- `company_owned` → OWNED_BY_COMPANY
+- `rental` → RENTED_BY_COMPANY  
+- `employee_owned` → RIDER_OWNED
 
 ---
 
@@ -53,23 +65,23 @@ Three ownership models used throughout:
 
 | ID | Task | Priority | Status | Notes |
 |----|------|----------|--------|-------|
-| T-001 | Define master ID strategy and audit fields | Critical | ✅ Done | Have id, created_at, updated_at, organization_id. Add deleted_at for soft delete |
-| T-002 | Create Riders entity with profile fields | Critical | ⚠️ Partial | `employees` exists. Add: license_number, license_expiry, visa_expiry, visa_number, bank_account_number, bank_name, rider_category |
-| T-003 | Create Vehicles entity with mixed-fleet attributes | Critical | ⚠️ Partial | `assets` exists. Add: vehicle_source_type, registration_expiry, insurance_expiry, current_rider_id |
-| T-004 | Add vehicle_source_type enumeration | Critical | 🔧 Can Build | RENTED_BY_COMPANY, OWNED_BY_COMPANY, RIDER_OWNED |
-| T-005 | Create Vehicle_Source_Details entity | Critical | 🔧 Can Build | Ownership proof, supplier_id, purchase_cost, rent_cost, contract_dates |
-| T-006 | Create Rider_Vehicle_Assignments history table | Critical | 🔧 Can Build | rider_id, vehicle_id, start_date, end_date, aggregator_id, client_id, reassignment_reason |
+| T-001 | Define master ID strategy and audit fields | Critical | ✅ Done | Added deleted_at for soft delete (migration 001) |
+| T-002 | Create Riders entity with profile fields | Critical | ✅ Done | Added license, visa, rider_category fields (migration 001) |
+| T-003 | Create Vehicles entity with mixed-fleet attributes | Critical | ✅ Done | Added registration, insurance, vehicle_status (migration 002) |
+| T-004 | Add vehicle_source_type enumeration | Critical | ✅ Done | Using existing `ownership` enum (company_owned, rental, employee_owned) |
+| T-005 | Create Vehicle_Source_Details entity | Critical | ✅ Done | Added purchase_date, purchase_price, expected_life to assets (migration 002) |
+| T-006 | Create Rider_Vehicle_Assignments history table | Critical | ✅ Done | Created rider_vehicle_assignments with handover tracking (migration 003) |
 | T-007 | Create Clients entity | High | ✅ Done | `platforms` table works for this |
-| T-008 | Create Aggregators entity | Critical | 🔧 Can Build | New table: name, api_config, commission_rate, is_active |
-| T-009 | Create Contracts entity | Critical | 🔧 Can Build | rates, validity_start, validity_end, billing_terms, client_id, aggregator_id |
+| T-008 | Create Aggregators entity | Critical | ✅ Done | Using platforms table with new integration fields (migration 004) |
+| T-009 | Create Contracts entity | Critical | ✅ Done | Created contracts table with billing models (migration 005) |
 | T-010 | Create Shifts entity | High | ✅ Done | `shifts` table exists |
-| T-011 | Create Attendance entity | Critical | 🔧 Can Build | rider_id, shift_id, check_in_time, check_in_location, check_out_time, check_out_location, worked_hours, status, approved_by |
-| T-012 | Create Orders entity | Critical | 🔧 Can Build | external_order_id, rider_id, vehicle_id, aggregator_id, distance_km, revenue, payout, import_batch_id |
-| T-013 | Create Maintenance_Events entity | Critical | 🔧 Can Build | vehicle_id, event_type (service/repair/accident), cost, paid_by, recovered_from, downtime_hours |
+| T-011 | Create Attendance entity | Critical | ✅ Done | Created attendance with GPS check-in/out (migration 006) |
+| T-012 | Create Orders entity | Critical | ✅ Done | Created orders table for aggregator imports (migration 007) |
+| T-013 | Create Maintenance_Events entity | Critical | ✅ Done | Created maintenance_events with cost tracking (migration 008) |
 | T-014 | Create Payroll entity | Critical | 🔧 Can Build | rider_id, period_start, period_end, fixed_pay, order_pay, allowances, deductions, advances, net_pay |
 | T-015 | Create Finance_Ledger / cost allocation | High | 🔧 Can Build | transaction_type, vehicle_id, rider_id, supplier_id, aggregator_id, amount, category |
-| T-016 | Create Incidents/accidents entity | High | 🔧 Can Build | incident_type, vehicle_id, rider_id, responsibility, cost, recovery_status, downtime_days |
-| T-017 | Define master status enums | High | ⚠️ Partial | Have some. Need unified: rider_status, vehicle_status, order_status, compliance_status |
+| T-016 | Create Incidents/accidents entity | High | ✅ Done | Created incidents table (migration 009) |
+| T-017 | Define master status enums | High | ✅ Done | Added vehicle_status, compliance_status, attendance_status, order_status |
 | T-018 | Design user roles and permission matrix | High | ⚠️ Partial | Have role field. Need granular permissions per module |
 
 ---
