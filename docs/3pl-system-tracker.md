@@ -5,408 +5,271 @@
 
 ---
 
-## Executive Summary
+## Quick Stats
 
 | Metric | Count |
 |--------|-------|
-| Total Tasks | 109 |
-| Already Built (full/partial) | ~15 |
-| Not Started | ~94 |
-| Needs Clarification | 8 |
+| Total Tasks | 110 (109 + 36-1) |
+| Phase 1 - Foundation | 32 tasks |
+| Phase 2 - Core Operations | 35 tasks |
+| Phase 3 - Finance & Control | 22 tasks |
+| Phase 4 - Integrations & BI | 21 tasks |
 
-### Phase Overview
+### Status Key
 
-| Phase | Focus | Priority Tasks |
-|-------|-------|----------------|
-| **Phase 1 - Foundation** | Data model, core entities, compliance basics | 32 Critical/High |
-| **Phase 2 - Core Operations** | Shifts, attendance, orders, incidents | 28 Critical/High |
-| **Phase 3 - Finance & Control** | Payroll, billing, maintenance, cost models | 25 Critical/High |
-| **Phase 4 - Integrations & BI** | APIs, dashboards, reports | 24 Medium/Low |
+- ✅ **Done** - Already built in our system
+- ⚠️ **Partial** - Exists but needs additions
+- 🔧 **Can Build** - Ready to implement
+- 🔌 **Needs Integration** - Requires external API/system
+- ❓ **Needs Info** - Missing details from partner
+- ⏳ **Not Started** - Clear requirements, not yet built
 
 ---
 
 ## Terminology Mapping
 
-| Partner Term | Our Current Term | Action Needed |
-|--------------|------------------|---------------|
-| **Riders** | Employees | Consider renaming or adding `rider_category` field |
-| **Vehicles** | Assets | Need to add `vehicle_source_type` enum |
-| **Aggregators** | N/A | New entity (Talabat, Jahez, Keeta) |
-| **Clients** | Platforms | Already exists, good match |
-| **Orders** | N/A | New entity - external delivery orders |
-| **Attendance** | N/A | New entity - GPS check-in/out |
-| **Contracts** | N/A | New entity - rate/billing terms |
-| **Payroll** | N/A | New entity - complex pay calculation |
-| **Maintenance_Events** | N/A | New entity - service/repair tracking |
+| Partner Term | Our Current Term | Notes |
+|--------------|------------------|-------|
+| Riders | Employees | Keep as employees, add rider-specific fields |
+| Vehicles | Assets | Add vehicle-specific fields, keep generic asset support |
+| Aggregators | N/A | New table - Talabat, Jahez, Keeta |
+| Clients | Platforms | Good match |
+| Orders | N/A | New table - delivery orders from aggregators |
+| Attendance | N/A | New table - GPS check-in/out |
+| Contracts | N/A | New table - rate/billing terms |
+| Payroll | N/A | New table - pay calculation |
+| Maintenance_Events | N/A | New table - service/repair |
 
-### Vehicle Source Types (Critical Concept)
+### Vehicle Source Types
 
-They use a mixed-fleet model with 3 vehicle ownership types:
-
-| Type | Code | Description | Our Impact |
-|------|------|-------------|------------|
-| Company Owned | `OWNED_BY_COMPANY` | Company purchased the bike | Full asset tracking, depreciation |
-| Rented | `RENTED_BY_COMPANY` | Rented from suppliers | Supplier management, rental costs |
-| Rider Owned | `RIDER_OWNED` | Rider brings own bike | Allowance payments, less control |
-
-Many tasks have different logic paths based on source type. This is a **core architectural decision**.
+Three ownership models used throughout:
+- `OWNED_BY_COMPANY` - Company purchased
+- `RENTED_BY_COMPANY` - Rented from suppliers  
+- `RIDER_OWNED` - Rider's own bike
 
 ---
 
 ## Module 1: Data Model (18 Tasks)
 
-### What We Have vs What They Need
-
-| Their Entity | Our Entity | Match | Gap |
-|--------------|------------|-------|-----|
-| Riders | `employees` | Partial | Need rider-specific fields (license, visa, bank, rider_category) |
-| Vehicles | `assets` | Partial | Need `vehicle_source_type`, compliance dates, assignment tracking |
-| Clients | `platforms` | ✅ Good | Minor field additions |
-| Aggregators | N/A | ❌ Missing | New table needed |
-| Contracts | N/A | ❌ Missing | New table needed |
-| Shifts | `shifts` | ✅ Good | Need attendance linkage |
-| Attendance | N/A | ❌ Missing | New table needed |
-| Orders | N/A | ❌ Missing | New table needed |
-| Maintenance_Events | N/A | ❌ Missing | New table needed |
-| Payroll | N/A | ❌ Missing | New table needed |
-| Finance_Ledger | N/A | ❌ Missing | New table needed |
-| Incidents | N/A | ❌ Missing | New table needed |
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-001 | Master ID strategy and audit fields | ✅ Done | All tables have `id`, `created_at`, `updated_at`, `organization_id` | Add `deleted_at` for soft delete? |
-| T-002 | Create Riders entity | ⚠️ Partial | `employees` table exists | Need: license_number, license_expiry, visa_expiry, bank_account, rider_category |
-| T-003 | Create Vehicles entity | ⚠️ Partial | `assets` table exists | Need: vehicle_source_type, compliance_dates, current_assignment |
-| T-004 | Add vehicle_source_type enum | ❌ Not Started | - | Critical: `RENTED_BY_COMPANY`, `OWNED_BY_COMPANY`, `RIDER_OWNED` |
-| T-005 | Create Vehicle_Source_Details entity | ❌ Not Started | - | Ownership proof, supplier, costs, responsibilities |
-| T-006 | Create Rider_Vehicle_Assignments | ❌ Not Started | - | History table for assignment tracking |
-| T-007 | Create Clients entity | ✅ Done | `platforms` table | May need fields for 3PL customer specifics |
-| T-008 | Create Aggregators entity | ❌ Not Started | - | Talabat, Jahez, Keeta config |
-| T-009 | Create Contracts entity | ❌ Not Started | - | Rates, validity, billing terms |
-| T-010 | Create Shifts entity | ✅ Done | `shifts` table | Need attendance linkage |
-| T-011 | Create Attendance entity | ❌ Not Started | - | GPS check-in/out, worked hours |
-| T-012 | Create Orders entity | ❌ Not Started | - | External order data from aggregators |
-| T-013 | Create Maintenance_Events entity | ❌ Not Started | - | Service/repair/accident records |
-| T-014 | Create Payroll entity | ❌ Not Started | - | Complex pay calculation |
-| T-015 | Create Finance_Ledger | ❌ Not Started | - | Cost allocation structure |
-| T-016 | Create Incidents entity | ❌ Not Started | - | Accidents, damage, downtime |
-| T-017 | Define master status enums | ⚠️ Partial | Some enums exist | Need unified status strategy |
-| T-018 | User roles and permission matrix | ⚠️ Partial | `user_profiles.role` exists | Need granular permissions |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-001 | Define master ID strategy and audit fields | Critical | ✅ Done | Have id, created_at, updated_at, organization_id. Add deleted_at for soft delete |
+| T-002 | Create Riders entity with profile fields | Critical | ⚠️ Partial | `employees` exists. Add: license_number, license_expiry, visa_expiry, visa_number, bank_account_number, bank_name, rider_category |
+| T-003 | Create Vehicles entity with mixed-fleet attributes | Critical | ⚠️ Partial | `assets` exists. Add: vehicle_source_type, registration_expiry, insurance_expiry, current_rider_id |
+| T-004 | Add vehicle_source_type enumeration | Critical | 🔧 Can Build | RENTED_BY_COMPANY, OWNED_BY_COMPANY, RIDER_OWNED |
+| T-005 | Create Vehicle_Source_Details entity | Critical | 🔧 Can Build | Ownership proof, supplier_id, purchase_cost, rent_cost, contract_dates |
+| T-006 | Create Rider_Vehicle_Assignments history table | Critical | 🔧 Can Build | rider_id, vehicle_id, start_date, end_date, aggregator_id, client_id, reassignment_reason |
+| T-007 | Create Clients entity | High | ✅ Done | `platforms` table works for this |
+| T-008 | Create Aggregators entity | Critical | 🔧 Can Build | New table: name, api_config, commission_rate, is_active |
+| T-009 | Create Contracts entity | Critical | 🔧 Can Build | rates, validity_start, validity_end, billing_terms, client_id, aggregator_id |
+| T-010 | Create Shifts entity | High | ✅ Done | `shifts` table exists |
+| T-011 | Create Attendance entity | Critical | 🔧 Can Build | rider_id, shift_id, check_in_time, check_in_location, check_out_time, check_out_location, worked_hours, status, approved_by |
+| T-012 | Create Orders entity | Critical | 🔧 Can Build | external_order_id, rider_id, vehicle_id, aggregator_id, distance_km, revenue, payout, import_batch_id |
+| T-013 | Create Maintenance_Events entity | Critical | 🔧 Can Build | vehicle_id, event_type (service/repair/accident), cost, paid_by, recovered_from, downtime_hours |
+| T-014 | Create Payroll entity | Critical | 🔧 Can Build | rider_id, period_start, period_end, fixed_pay, order_pay, allowances, deductions, advances, net_pay |
+| T-015 | Create Finance_Ledger / cost allocation | High | 🔧 Can Build | transaction_type, vehicle_id, rider_id, supplier_id, aggregator_id, amount, category |
+| T-016 | Create Incidents/accidents entity | High | 🔧 Can Build | incident_type, vehicle_id, rider_id, responsibility, cost, recovery_status, downtime_days |
+| T-017 | Define master status enums | High | ⚠️ Partial | Have some. Need unified: rider_status, vehicle_status, order_status, compliance_status |
+| T-018 | Design user roles and permission matrix | High | ⚠️ Partial | Have role field. Need granular permissions per module |
 
 ---
 
 ## Module 2: HR (14 Tasks)
 
-### What We Have
-
-- ✅ Employee management (basic CRUD)
-- ✅ Leave management
-- ✅ Documents management
-- ✅ Discipline/Performance tracking
-- ✅ Training management
-- ❌ Onboarding workflow
-- ❌ Payroll inputs/calculation
-- ❌ Contract templates
-- ❌ Visa/license expiry tracking
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-019 | Rider onboarding workflow | ❌ Not Started | - | Multi-step application to activation |
-| T-020 | Rider category rules by transport model | ❌ Not Started | - | Different handling for company-bike vs rider-owned |
-| T-021 | Document collection checklist | ⚠️ Partial | `employee_documents` exists | Need: checklist logic, required docs list |
-| T-022 | Employment contract templates | ❌ Not Started | - | Different clauses per vehicle source type |
-| T-023 | Deposit/deduction agreements | ❌ Not Started | - | Damage, uniform, equipment recovery |
-| T-024 | Visa and license expiry alerts | ❌ Not Started | - | **Critical** - block activation if expired |
-| T-025 | Pay components and earning rules | ❌ Not Started | - | Fixed, per-order, km, allowance, deductions |
-| T-026 | Own-bike allowance policy | ❌ Not Started | - | Rider-owned vehicle allowance |
-| T-027 | Company-bike deduction policy | ❌ Not Started | - | Monthly/daily deduction for company vehicles |
-| T-028 | Attendance approval flow | ❌ Not Started | - | Manual override, lateness handling |
-| T-029 | Disciplinary process for vehicle misuse | ⚠️ Partial | `performance_discipline` exists | Need: vehicle-specific triggers |
-| T-030 | Offboarding checklist | ❌ Not Started | - | Final pay, asset return, doc archive |
-| T-031 | Leave/absence handling | ✅ Done | `leaves` table | Link to roster and payroll |
-| T-032 | HR dashboard metrics | ❌ Not Started | - | Headcount, churn, expired docs |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-019 | Define rider onboarding workflow | Critical | 🔧 Can Build | Multi-step: application → document upload → review → approval → activation |
+| T-020 | Create rider category rules by transport model | Critical | 🔧 Can Build | company_bike_rider vs rider_owned_rider categories affect pay/deductions |
+| T-021 | Build document collection checklist | High | ⚠️ Partial | `employee_documents` exists. Add: required_documents config, completion tracking |
+| T-022 | Prepare employment/service contract templates | High | ❓ Needs Info | Need actual contract templates/clauses from partner |
+| T-023 | Capture deposit/deduction agreements | High | 🔧 Can Build | deposit_amount, deduction_type, recovery_schedule per employee |
+| T-024 | Track visa and license expiry alerts | Critical | 🔧 Can Build | Add expiry fields + cron job for alerts. Block if expired |
+| T-025 | Define pay components and earning rules | Critical | ❓ Needs Info | Need actual formulas: fixed vs per-order vs km-based rates |
+| T-026 | Define own-bike allowance policy | High | ❓ Needs Info | What's the allowance amount? When paid? |
+| T-027 | Define company-bike deduction policy | High | ❓ Needs Info | Daily vs monthly deduction amount? |
+| T-028 | Design attendance approval flow | High | 🔧 Can Build | missed_checkin handling, manual_override, supervisor_approval |
+| T-029 | Create disciplinary process for vehicle misuse | Medium | ⚠️ Partial | `performance_discipline` exists. Add vehicle-linked triggers |
+| T-030 | Create offboarding checklist | High | 🔧 Can Build | final_pay_calculated, assets_returned, accounts_disabled, documents_archived |
+| T-031 | Design leave/absence handling | Medium | ✅ Done | `leaves` table exists with roster impact |
+| T-032 | Define HR dashboard metrics | Medium | 🔧 Can Build | headcount, active_riders, expired_docs_count, monthly_churn, payroll_exceptions |
 
 ---
 
 ## Module 3: Operations (15 Tasks)
 
-### What We Have
-
-- ✅ Shifts management
-- ✅ Coaching records
-- ✅ Assets/Locations
-- ❌ Rider allocation logic
-- ❌ Order management
-- ❌ Live control tower
-- ❌ Incident handling
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-033 | Shift planning and roster | ⚠️ Partial | `shifts` exists | Need: aggregator/client assignment |
-| T-034 | Rider eligibility check | ❌ Not Started | - | Validate docs + vehicle before activation |
-| T-035 | Rider allocation rules by aggregator | ❌ Not Started | - | Talabat/Jahez/Keeta assignment logic |
-| T-036 | Rider + vehicle pairing workflow | ❌ Not Started | - | Match available vehicle to rider |
-| 36-1 | Replace vehicle of rider | ❌ Not Started | - | Temp/perm replacement for vehicle issues |
-| T-037 | Live operations control tower | ❌ Not Started | - | Phase 4 - Real-time dashboard |
-| T-038 | Breakdown escalation workflow | ❌ Not Started | - | Different paths per source type |
-| T-039 | Connect attendance to roster | ❌ Not Started | - | Show no-shows, late arrivals |
-| T-040 | Manual order import | ❌ Not Started | - | CSV fallback when API unavailable |
-| T-041 | Order reconciliation process | ❌ Not Started | - | Validate against aggregator data |
-| T-042 | Exception queue for mismatched orders | ❌ Not Started | - | Surface mapping failures |
-| T-043 | Accident/incident procedure | ❌ Not Started | - | Escalation, approval, evidence |
-| T-044 | Spare vehicle dispatch logic | ❌ Not Started | - | Replacement eligibility rules |
-| T-045 | Rider-owned breakdown support policy | ❌ Not Started | - | When company helps vs rider responsible |
-| T-046 | Operations dashboard metrics | ❌ Not Started | - | Orders/rider, attendance gaps |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-033 | Build shift planning and roster structure | Critical | ⚠️ Partial | `shifts` exists. Add: client_id, aggregator_id assignment |
+| T-034 | Create rider eligibility check before shift activation | Critical | 🔧 Can Build | Check: docs valid, vehicle assigned, no blocks |
+| T-035 | Design rider allocation rules by aggregator | Critical | 🔧 Can Build | Which riders can work for which aggregators |
+| T-036 | Build rider + vehicle pairing workflow | High | 🔧 Can Build | Match available compliant vehicle to rider for shift |
+| T-036-1 | Replace vehicle of rider | High | 🔧 Can Build | Temp or perm replacement when vehicle has issues |
+| T-037 | Design live operations control tower view | High | 🔧 Can Build | Real-time: online riders, active orders, issues, idle riders |
+| T-038 | Create breakdown escalation workflow | Critical | 🔧 Can Build | Different escalation paths per vehicle source type |
+| T-039 | Connect attendance to operations roster | High | 🔧 Can Build | Show no-shows, late arrivals in ops view |
+| T-040 | Create manual order import fallback | Medium | 🔧 Can Build | CSV upload when API unavailable |
+| T-041 | Define order reconciliation process | Critical | 🔧 Can Build | Compare our orders vs aggregator data, flag mismatches |
+| T-042 | Build exception queue for mismatched orders | High | 🔧 Can Build | Orders where rider/vehicle mapping fails |
+| T-043 | Define accident/incident operating procedure | High | 🔧 Can Build | Escalation rules, required evidence, approval flow |
+| T-044 | Define spare vehicle dispatch logic | High | 🔧 Can Build | Spare pool rules, who's eligible for replacement |
+| T-045 | Create rider-owned breakdown support policy | Medium | ❓ Needs Info | When does company help vs rider responsible? |
+| T-046 | Define operations dashboard metrics | Medium | 🔧 Can Build | orders_per_rider, late_deliveries, attendance_rate, downtime |
 
 ---
 
 ## Module 4: Fleet (15 Tasks)
 
-### What We Have
-
-- ✅ Asset management (basic)
-- ✅ Locations management
-- ⚠️ Vendor management (for suppliers)
-- ❌ Vehicle-specific tracking
-- ❌ Maintenance scheduling
-- ❌ Assignment history
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-047 | Vehicle onboarding checklist | ❌ Not Started | - | Registration, insurance, photos, VIN |
-| T-048 | Source-type-specific fields | ❌ Not Started | - | Different data per ownership type |
-| T-049 | Supplier master for rented vehicles | ⚠️ Partial | `vendors` exists | Add rental-specific fields |
-| T-050 | Owned fleet asset profile | ❌ Not Started | - | Purchase date, capex, expected life |
-| T-051 | Rider-owned approval workflow | ❌ Not Started | - | Ownership proof, inspection |
-| T-052 | Vehicle assignment history | ❌ Not Started | - | Track every assignment/return |
-| T-053 | Vehicle handover checklist | ❌ Not Started | - | Condition, damages, odometer |
-| T-054 | Preventive maintenance schedule | ❌ Not Started | - | Service intervals by km/time |
-| T-055 | Maintenance routing rules | ❌ Not Started | - | Supplier vs workshop vs rider |
-| T-056 | Downtime tracking | ❌ Not Started | - | Start/end, replacement needs |
-| T-057 | Registration/insurance expiry tracker | ❌ Not Started | - | **Critical** - block non-compliant |
-| T-058 | Return-to-supplier workflow | ❌ Not Started | - | Off-hire, condition check |
-| T-059 | Owned fleet lifecycle planning | ❌ Not Started | - | Age, utilization, disposal triggers |
-| T-060 | Spare pool logic | ❌ Not Started | - | Backup vehicle management |
-| T-061 | Fleet dashboard metrics | ❌ Not Started | - | Utilization, downtime, aging |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-047 | Define vehicle onboarding checklist | Critical | 🔧 Can Build | registration, insurance, photos, VIN, readiness_check |
+| T-048 | Create source-type-specific field requirements | Critical | 🔧 Can Build | Different required fields per OWNED/RENTED/RIDER_OWNED |
+| T-049 | Design supplier master for rented vehicles | High | ⚠️ Partial | `vendors` exists. Add: rental_rate, replacement_terms, sla_days |
+| T-050 | Design owned fleet asset profile | High | 🔧 Can Build | purchase_date, purchase_price, expected_life_years, disposal_method |
+| T-051 | Design rider-owned approval workflow | Critical | 🔧 Can Build | ownership_proof, inspection_date, insurance_verified, registration_verified |
+| T-052 | Implement vehicle assignment history and return flow | Critical | 🔧 Can Build | Track every assignment, off-hire, replacement, return |
+| T-053 | Create vehicle handover checklist | High | 🔧 Can Build | condition_notes, accessories, damages, odometer, rider_signature |
+| T-054 | Define preventive maintenance schedule | High | 🔧 Can Build | service_interval_km, service_interval_days, next_service_due |
+| T-055 | Define maintenance routing rules by source type | Critical | 🔧 Can Build | OWNED→workshop, RENTED→supplier, RIDER_OWNED→rider |
+| T-056 | Capture downtime start/end and replacement requirement | High | 🔧 Can Build | downtime_start, downtime_end, replacement_needed, replacement_vehicle_id |
+| T-057 | Create registration/insurance/inspection expiry tracker | Critical | 🔧 Can Build | Block vehicle if any expired |
+| T-058 | Create return-to-supplier workflow for rented vehicles | Medium | 🔧 Can Build | off_hire_date, condition_check, penalties, closure_status |
+| T-059 | Define owned fleet lifecycle and replacement planning | High | 🔧 Can Build | age_years, total_km, utilization_rate, replacement_triggered |
+| T-060 | Create spare pool / standby fleet logic | Medium | 🔧 Can Build | is_spare, available_for_dispatch, priority_order |
+| T-061 | Define fleet dashboard metrics | Medium | 🔧 Can Build | utilization_rate, downtime_hours, avg_age, maintenance_due, off_road_count |
 
 ---
 
 ## Module 5: Finance (15 Tasks)
 
-### What We Have
-
-- ✅ Invoices (basic)
-- ✅ Platforms/Clients
-- ✅ Vendors
-- ❌ Payroll calculation
-- ❌ Cost models
-- ❌ Depreciation
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-062 | Revenue models by aggregator | ❌ Not Started | - | Per order, hybrid, incentives |
-| T-063 | Client/aggregator billing rules | ❌ Not Started | - | Who pays, at what rate |
-| T-064 | Rented vehicle cost model | ❌ Not Started | - | Rent, deposit, insurance, repairs |
-| T-065 | Owned vehicle cost model | ❌ Not Started | - | Depreciation, maintenance |
-| T-066 | Rider-owned cost model | ❌ Not Started | - | Allowance, subsidy |
-| T-067 | Payroll engine formulas | ❌ Not Started | - | Complex pay calculation |
-| T-068 | Vehicle-related deductions/allowances | ❌ Not Started | - | Different per source type |
-| T-069 | Supplier rental payable workflow | ❌ Not Started | - | Invoice intake, matching |
-| T-070 | Depreciation schedule | ❌ Not Started | - | Monthly depreciation |
-| T-071 | Invoicing workflow | ⚠️ Partial | `invoices` exists | Need billing output details |
-| T-072 | Collections/dispute tracker | ❌ Not Started | - | Invoice aging, disputes |
-| T-073 | Profit by vehicle source type | ❌ Not Started | - | **Critical** - owned vs rented vs rider-owned |
-| T-074 | Profit by aggregator/client | ❌ Not Started | - | Margin by contract |
-| T-075 | Month-end close checklist | ❌ Not Started | - | Reconciliation process |
-| T-076 | Finance dashboard metrics | ❌ Not Started | - | Revenue, margin, cost/delivery |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-062 | Map revenue models by aggregator and contract | Critical | ❓ Needs Info | Need actual rate structures: per-order, hybrid, incentive rules |
+| T-063 | Design client/aggregator billing rules | Critical | 🔧 Can Build | who_pays, rate, reconciliation_method |
+| T-064 | Build rented vehicle monthly cost model | Critical | 🔧 Can Build | rent + deposit + insurance_share + repairs + downtime_cost |
+| T-065 | Build owned vehicle monthly cost model | Critical | 🔧 Can Build | depreciation + insurance + registration + maintenance + downtime |
+| T-066 | Build rider-owned company cost model | High | 🔧 Can Build | allowance + subsidy + compliance_admin_cost |
+| T-067 | Design payroll engine formula library | Critical | ❓ Needs Info | Need actual formulas for each pay component |
+| T-068 | Map vehicle-related deductions and allowances | Critical | ❓ Needs Info | Different treatment per source type - need specifics |
+| T-069 | Build supplier rental payable workflow | High | 🔧 Can Build | invoice_received, matched_to_contract, approved, payment_scheduled |
+| T-070 | Build depreciation schedule for owned fleet | High | 🔧 Can Build | straight_line or reducing_balance, monthly_depreciation |
+| T-071 | Build invoicing workflow | High | ⚠️ Partial | `invoices` exists. Add: period detail, aggregator breakdown |
+| T-072 | Build collections and dispute tracker | Medium | 🔧 Can Build | invoice_id, aging_days, dispute_reason, resolution_status |
+| T-073 | Define profit by vehicle source type report | Critical | 🔧 Can Build | Revenue - costs grouped by OWNED/RENTED/RIDER_OWNED |
+| T-074 | Define profit by aggregator and client report | High | 🔧 Can Build | Gross margin by contract |
+| T-075 | Design month-end close checklist | Medium | 🔧 Can Build | orders_reconciled, payroll_finalized, fleet_costs_posted, ap_ar_matched |
+| T-076 | Define finance dashboard metrics | Medium | 🔧 Can Build | revenue, gross_margin, cost_per_delivery, payables, receivables |
 
 ---
 
 ## Module 6: Compliance (12 Tasks)
 
-### What We Have
-
-- ✅ Document storage
-- ⚠️ Basic status tracking
-- ❌ Expiry alerts
-- ❌ Activation blocks
-- ❌ Audit trails
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-077 | Legal/compliance document matrix | ❌ Not Started | - | Required docs by country/client |
-| T-078 | Rider activation block rules | ❌ Not Started | - | **Critical** - expired docs = blocked |
-| T-079 | Vehicle activation block rules | ❌ Not Started | - | **Critical** - expired = blocked |
-| T-080 | Rider-owned vehicle approval controls | ❌ Not Started | - | Ownership proof, inspection |
-| T-081 | Rented vehicle supplier controls | ❌ Not Started | - | Valid contract, SLA |
-| T-082 | Owned fleet audit requirements | ❌ Not Started | - | Asset tag, depreciation |
-| T-083 | Accident evidence checklist | ❌ Not Started | - | Photos, police report, statement |
-| T-084 | Liability/recovery approval flow | ❌ Not Started | - | Cost recovery decisions |
-| T-085 | Audit log requirements | ❌ Not Started | - | Track sensitive field changes |
-| T-086 | Exception approval workflow | ❌ Not Started | - | Temporary overrides |
-| T-087 | Document archive/retention | ⚠️ Partial | Files stored | Need retention policy |
-| T-088 | Compliance dashboard metrics | ❌ Not Started | - | Expired docs, blocked assets |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-077 | Create legal/compliance document matrix | Critical | ❓ Needs Info | Need list of required docs by Bahrain law / aggregator requirements |
+| T-078 | Create rider activation block rules | Critical | 🔧 Can Build | Block if: visa_expired OR license_expired OR bank_invalid OR contract_missing |
+| T-079 | Create vehicle activation block rules | Critical | 🔧 Can Build | Block if: registration_expired OR insurance_expired OR inspection_failed |
+| T-080 | Define rider-owned vehicle approval controls | Critical | 🔧 Can Build | ownership_verified, inspection_passed, insurance_valid, registration_valid |
+| T-081 | Define rented vehicle supplier control requirements | High | 🔧 Can Build | contract_valid, liability_terms_accepted, sla_defined |
+| T-082 | Define owned fleet audit requirements | Medium | 🔧 Can Build | asset_tagged, depreciation_setup, maintenance_plan_exists |
+| T-083 | Create accident evidence checklist | High | 🔧 Can Build | photos_uploaded, police_report, rider_statement, vehicle_status, recovery_decision |
+| T-084 | Create liability and recovery approval flow | High | 🔧 Can Build | cost_threshold for finance_approval, recovery_from options |
+| T-085 | Define audit log requirements | High | 🔧 Can Build | Log changes to: status, rates, assignments, payroll fields |
+| T-086 | Define exception approval workflow | High | 🔧 Can Build | grace_period_requests, urgent_shift_overrides, replacement_approvals |
+| T-087 | Define document archive and retention policy | Medium | ⚠️ Partial | Files stored in Supabase. Add: retention_years, archive_rules |
+| T-088 | Define compliance dashboard metrics | Medium | 🔧 Can Build | expired_docs, blocked_riders, blocked_vehicles, open_incidents |
 
 ---
 
 ## Module 7: Integrations (10 Tasks)
 
-### What We Have
-
-- ❌ No external integrations yet
-- ❌ No mobile app
-- ❌ No GPS/telematics
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-089 | Aggregator API requirements | ❌ Not Started | - | Talabat/Jahez/Keeta APIs |
-| T-090 | External order ID mapping | ❌ Not Started | - | Unique reference tracking |
-| T-091 | Earnings/incentive import | ❌ Not Started | - | Link to payroll/billing |
-| T-092 | GPS/telematics integration | ❌ Not Started | - | Location, trip, distance |
-| T-093 | Mobile app needs | ❌ Not Started | - | Rider and supervisor apps |
-| T-094 | Accounting system integration | ❌ Not Started | - | AP, AR, journals |
-| T-095 | E-sign/document storage | ⚠️ Partial | Supabase storage | Add e-sign? |
-| T-096 | Alerting requirements | ❌ Not Started | - | Expiry, breakdown alerts |
-| T-097 | Webhook retry/error handling | ❌ Not Started | - | Idempotent, monitored |
-| T-098 | Integration monitoring | ❌ Not Started | - | Daily status checks |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-089 | Gather API requirements for Talabat/Jahez/Keeta | Critical | 🔌 Needs Integration | Need API docs and credentials from aggregators |
+| T-090 | Design external order ID mapping strategy | Critical | 🔧 Can Build | external_order_id unique per aggregator, import_batch tracking |
+| T-091 | Design earnings/incentive import mapping | High | 🔌 Needs Integration | Depends on aggregator API data format |
+| T-092 | Define GPS/telematics integration requirements | High | 🔌 Needs Integration | Need to know which GPS provider |
+| T-093 | Define mobile app needs for rider and supervisor | High | 🔌 Needs Integration | Attendance, issues, assignments, earnings - future mobile app |
+| T-094 | Define accounting system integration scope | Medium | 🔌 Needs Integration | AP, AR, journals - need to know target accounting system |
+| T-095 | Define e-sign/document storage integration | Medium | ⚠️ Partial | Supabase storage works. E-sign needs third-party (DocuSign?) |
+| T-096 | Create alerting requirements | High | 🔧 Can Build | Email/SMS for: expiry_alerts, breakdown_alerts, blocked_activation |
+| T-097 | Design webhook retry and error handling | High | 🔧 Can Build | Idempotent imports, retry_count, error_log |
+| T-098 | Create integration monitoring checklist | Medium | 🔧 Can Build | daily_sync_status, failure_count, latency_ms, reconciliation_gaps |
 
 ---
 
 ## Module 8: BI & Reports (11 Tasks)
 
-### What We Have
-
-- ⚠️ Basic KPIs page (placeholder)
-- ❌ No real dashboards
-- ❌ No report exports
-
-### Task Details
-
-| Task ID | Task | Status | Our Work | Notes |
-|---------|------|--------|----------|-------|
-| T-099 | KPI dictionary | ❌ Not Started | - | Formulas, owners, frequency |
-| T-100 | Source-type profitability KPIs | ❌ Not Started | - | **Critical** - profit per model |
-| T-101 | CEO dashboard | ❌ Not Started | - | Executive summary view |
-| T-102 | Weekly executive pack | ❌ Not Started | - | Performance summary |
-| T-103 | Rider productivity report | ❌ Not Started | - | Orders/rider, shift hours |
-| T-104 | Idle rider/vehicle analysis | ❌ Not Started | - | Underutilization |
-| T-105 | Fleet aging/replacement report | ❌ Not Started | - | Owned fleet lifecycle |
-| T-106 | Downtime/maintenance report | ❌ Not Started | - | Hours lost, causes |
-| T-107 | Payroll exception report | ❌ Not Started | - | Outliers, zero-pay |
-| T-108 | Billing reconciliation report | ❌ Not Started | - | Order count, disputes |
-| T-109 | Compliance risk report | ❌ Not Started | - | Expiries, blocked assets |
+| ID | Task | Priority | Status | Notes |
+|----|------|----------|--------|-------|
+| T-099 | Create KPI dictionary | High | 🔧 Can Build | Define formula, owner, grain (daily/weekly/monthly), refresh_frequency |
+| T-100 | Define source-type profitability KPIs | Critical | 🔧 Can Build | profit_per_owned_vehicle, profit_per_rented, profit_per_rider_owned |
+| T-101 | Design CEO dashboard | Medium | 🔧 Can Build | revenue, gross_margin, active_riders, source_type_mix, risk_counts |
+| T-102 | Design weekly executive pack | Low | 🔧 Can Build | PDF/email summary for leadership |
+| T-103 | Define rider productivity report | Medium | 🔧 Can Build | orders_per_rider, shift_hours, acceptance_rate, downtime_impact |
+| T-104 | Define idle rider/vehicle analysis | Medium | 🔧 Can Build | underutilized resources, pairing opportunities |
+| T-105 | Define fleet aging and replacement report | Medium | 🔧 Can Build | age_distribution, disposal_candidates (owned only) |
+| T-106 | Define downtime and maintenance report | Medium | 🔧 Can Build | events_count, hours_lost, cause_breakdown, replacement_demand |
+| T-107 | Define payroll exception report | High | 🔧 Can Build | outliers, zero_pay_cases, negative_pay_cases |
+| T-108 | Define billing reconciliation report | High | 🔧 Can Build | order_count_match, revenue_match, disputes, invoice_support |
+| T-109 | Define compliance risk report | Medium | 🔧 Can Build | upcoming_expiries, blocked_assets, blocked_riders, unresolved_incidents |
 
 ---
 
-## Questions & Clarifications Needed
+## Items Needing Partner Information
 
-### 🔴 Critical Questions
+These tasks need specific details before we can implement:
 
-1. **Rider vs Employee**: Should we rename `employees` table to `riders`? Or keep employees and add a `rider_category` field?
+| Task | What We Need |
+|------|--------------|
+| T-022 | Actual employment/service contract templates |
+| T-025 | Pay component formulas (fixed, per-order, km rates) |
+| T-026 | Own-bike allowance amount and payment schedule |
+| T-027 | Company-bike deduction amounts (daily/monthly) |
+| T-045 | Rider-owned breakdown support policy details |
+| T-062 | Revenue rate structures from each aggregator |
+| T-067 | Complete payroll calculation formulas |
+| T-068 | Vehicle-related deduction/allowance specifics |
+| T-077 | Bahrain legal document requirements list |
 
-2. **Asset vs Vehicle**: Should `assets` become `vehicles`? We currently support generic assets (phones, uniforms). Do they only need bikes?
+## Items Needing External Integration
 
-3. **Aggregator API Access**: Do we have API documentation/credentials for Talabat, Jahez, Keeta? This is Phase 2 critical.
+These require third-party API access or integrations:
 
-4. **GPS Provider**: What GPS/telematics provider will be used? Need to plan integration.
-
-5. **Bahrain Labor Law**: Are there specific Bahraini employment/visa rules we need to encode?
-
-### 🟡 Design Questions
-
-6. **Task 36-1**: This was added manually (not T-###). Is this a partner addition? "Replace Vehicle of Rider"
-
-7. **Payroll Complexity**: How complex is the pay calculation? Need formula details for:
-   - Fixed salary vs per-order vs hybrid
-   - Allowances (fuel, phone, bike)
-   - Deductions (advances, damages, uniform)
-
-8. **Multi-Client**: Do riders work for multiple clients simultaneously, or exclusive assignment?
-
-### 🟢 Nice to Clarify
-
-9. **Document Types**: What specific documents are required in Bahrain? (CPR, visa, license types)
-
-10. **Currency**: Confirming BHD (Bahraini Dinar) throughout?
+| Task | Integration Needed |
+|------|-------------------|
+| T-089, T-091 | Talabat, Jahez, Keeta API documentation and credentials |
+| T-092 | GPS/telematics provider selection and API |
+| T-093 | Mobile app development (React Native / Flutter) |
+| T-094 | Accounting system (QuickBooks? Xero? Custom?) |
+| T-095 | E-signature provider (DocuSign? HelloSign?) |
 
 ---
 
-## Recommended Implementation Order
+## Implementation Progress
 
-### Sprint 1: Foundation (2-3 weeks)
-Focus: Data model changes
+### Sprint 1: Data Model Foundation
+_Target: Add new fields and tables_
 
-- [ ] Add `vehicle_source_type` enum to assets
-- [ ] Add rider-specific fields to employees (license, visa, bank)
-- [ ] Create `aggregators` table
-- [ ] Create `rider_vehicle_assignments` table
-- [ ] Add document expiry tracking
+| Task | Status | Date |
+|------|--------|------|
+| T-001 | ✅ | Existing |
+| T-002 | ⏳ | |
+| T-003 | ⏳ | |
+| T-004 | ⏳ | |
+| ... | | |
 
-### Sprint 2: Core Operations (3-4 weeks)
-Focus: Shifts + Orders + Attendance
+### Sprint 2: Core Workflows
+_Target: Attendance, Orders, Eligibility_
 
-- [ ] Create `attendance` table (GPS check-in/out)
-- [ ] Create `orders` table (aggregator imports)
-- [ ] Create `contracts` table (rates, terms)
-- [ ] Build rider eligibility checks
-- [ ] Manual order import (CSV)
-
-### Sprint 3: Fleet Management (2-3 weeks)
-Focus: Vehicle lifecycle
-
-- [ ] Create `maintenance_events` table
-- [ ] Vehicle assignment workflow
-- [ ] Expiry blocking logic
-- [ ] Handover checklists
-
-### Sprint 4: Finance & Payroll (3-4 weeks)
-Focus: Money flows
-
-- [ ] Create `payroll` table and calculation engine
-- [ ] Cost models per source type
-- [ ] Billing workflow improvements
-- [ ] Depreciation tracking (owned)
-
-### Sprint 5: Compliance & Reporting (2-3 weeks)
-Focus: Controls + Visibility
-
-- [ ] Audit trail implementation
-- [ ] Compliance dashboard
-- [ ] KPI dashboards
-- [ ] Executive reports
-
-### Sprint 6: Integrations (4+ weeks)
-Focus: External systems
-
-- [ ] Aggregator API integration (when available)
-- [ ] GPS/telematics integration
-- [ ] Mobile app (if needed)
-- [ ] Alerting system
+| Task | Status | Date |
+|------|--------|------|
+| ... | | |
 
 ---
 
-## Progress Tracking
+## Change Log
 
-| Date | Action | Tasks Affected |
-|------|--------|----------------|
-| 2026-04-18 | Received checklist from partner | All |
-| 2026-04-18 | Created internal tracker | - |
-| - | - | - |
-
----
-
-*Last updated: 2026-04-18*
+| Date | Change |
+|------|--------|
+| 2026-04-18 | Initial tracker created from partner checklist |
+| | |
