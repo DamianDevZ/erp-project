@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader, PageContent } from '@/components/ui';
 import { SettingsForm } from './SettingsForm';
 
 /**
@@ -21,12 +22,16 @@ export default async function SettingsPage() {
 
   if (!profile?.organization_id) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-heading">Settings</h1>
-          <p className="text-muted">No organization assigned.</p>
-        </div>
-      </div>
+      <PageContent>
+        <PageHeader
+          title="Settings"
+          description="No organization assigned."
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Settings' },
+          ]}
+        />
+      </PageContent>
     );
   }
 
@@ -41,23 +46,30 @@ export default async function SettingsPage() {
 
   if (!organization) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-heading">Settings</h1>
-          <p className="text-muted">Organization not found.</p>
-        </div>
-      </div>
+      <PageContent>
+        <PageHeader
+          title="Settings"
+          description="Organization not found."
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Settings' },
+          ]}
+        />
+      </PageContent>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-heading">Settings</h1>
-        <p className="text-muted">Manage your organization settings.</p>
-      </div>
-
+    <PageContent>
+      <PageHeader
+        title="Settings"
+        description="Manage your organization settings."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Settings' },
+        ]}
+      />
       <SettingsForm organization={organization} canEdit={canEdit} />
-    </div>
+    </PageContent>
   );
 }

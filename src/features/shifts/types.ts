@@ -49,6 +49,37 @@ export interface Shift {
   };
 }
 
+/**
+ * Shift assignment entity - links employees to shifts.
+ */
+export interface ShiftAssignment {
+  id: string;
+  organization_id: string;
+  shift_id: string;
+  employee_id: string;
+  vehicle_id: string | null;
+  assigned_by: string | null;
+  status: 'assigned' | 'confirmed' | 'declined' | 'no_show' | 'completed';
+  check_in_time: string | null;
+  check_out_time: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Related data from joins
+  employee?: {
+    id: string;
+    full_name: string;
+    employee_number: string | null;
+    phone: string | null;
+  };
+  vehicle?: {
+    id: string;
+    name: string;
+    license_plate: string | null;
+  };
+  shift?: Shift;
+}
+
 export interface ShiftTemplate {
   id: string;
   organization_id: string;

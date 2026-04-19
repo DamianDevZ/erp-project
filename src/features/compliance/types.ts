@@ -3,6 +3,16 @@
  * Track expiring documents and compliance status.
  */
 
+/** Compliance status for an entity */
+export type ComplianceStatus = 'compliant' | 'expiring_soon' | 'non_compliant' | 'blocked';
+
+export const COMPLIANCE_STATUS_LABELS: Record<ComplianceStatus, string> = {
+  compliant: 'Compliant',
+  expiring_soon: 'Expiring Soon',
+  non_compliant: 'Non-Compliant',
+  blocked: 'Blocked',
+};
+
 /** Alert type */
 export type AlertType =
   | 'license_expiring'

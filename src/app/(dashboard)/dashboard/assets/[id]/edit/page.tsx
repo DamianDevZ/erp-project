@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader, PageContent } from '@/components/ui';
 import { AssetForm } from '../../AssetForm';
 
 interface Props {
@@ -24,13 +25,18 @@ export default async function EditAssetPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-heading">Edit Asset</h1>
-        <p className="text-muted">Update asset information.</p>
-      </div>
-
+    <PageContent className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Edit Asset"
+        description="Update asset information."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Assets', href: '/dashboard/assets' },
+          { label: asset.name, href: `/dashboard/assets/${id}` },
+          { label: 'Edit' },
+        ]}
+      />
       <AssetForm asset={asset} />
-    </div>
+    </PageContent>
   );
 }

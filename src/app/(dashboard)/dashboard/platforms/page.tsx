@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui';
+import { Button, PageHeader, PageContent } from '@/components/ui';
 import { PlatformList } from './PlatformList';
 
 /**
@@ -8,20 +8,21 @@ import { PlatformList } from './PlatformList';
  */
 export default function PlatformsPage() {
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-heading">Clients</h1>
-          <p className="text-muted">Manage clients and billing rates.</p>
-        </div>
-        <Link href="/dashboard/platforms/new">
-          <Button>Add Client</Button>
-        </Link>
-      </div>
-
-      {/* Client list */}
+    <PageContent>
+      <PageHeader
+        title="Clients"
+        description="Manage clients and billing rates."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Clients' },
+        ]}
+        actions={
+          <Link href="/dashboard/platforms/new">
+            <Button>Add Client</Button>
+          </Link>
+        }
+      />
       <PlatformList />
-    </div>
+    </PageContent>
   );
 }

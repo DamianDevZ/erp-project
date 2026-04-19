@@ -1,47 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
+  DataTable,
+  type Column,
   Button,
-  Spinner,
-  Input,
   Badge,
+  FilterBar,
+  FilterSelect,
+  Input,
 } from '@/components/ui';
 import { useOrders, type OrderFilters } from '@/features/orders/queries';
-import { ORDER_STATUS_LABELS, type OrderStatus } from '@/features/orders';
+import { ORDER_STATUS_LABELS, type OrderStatus, type OrderWithRelations } from '@/features/orders';
+
+// NOTE: The query returns OrderWithRelations but useOrders types as Order
+// We use a type alias to match the actual data structure
+type Order = OrderWithRelations;
 
 /**
- * Orders list component with filtering and pagination.
+ * Orders list component using reusable DataTable.
  */
 export function OrdersList() {
+  const router = useRouter();
   const [filters, setFilters] = useState<OrderFilters>({});
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 25;
+  const [pageSize] = useState(25);
+  const [sortColumn, setSortColumn] = useState<string | null>('order_date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  const { data: ordersResult, isLoading, error, refetch } = useOrders(filters, { page, pageSize });
-  const orders = ordersResult?.data || [];
-  const totalPages = ordersResult?.totalPages || 1;
+  // Build filters for query
+  const queryFilters = useMemo(() => ({
+    ...filters,
+    search: search || undefined,
+  }), [filters, search]);
 
-  const handleSearch = (search: string) => {
-    setFilters(prev => ({ ...prev, search }));
-    setPage(1);
-  };
-
-  const handleStatusFilter = (status: OrderStatus | 'all') => {
-    setFilters(prev => ({
-      ...prev,
-      status: status === 'all' ? undefined : status,
-    }));
-    setPage(1);
-  };
+  const { data: result, isLoading, error, refetch } = useOrders(queryFilters, { page, pageSize });
 
   const formatCurrency = (amount: number | null) =>
     amount != null
@@ -51,148 +47,142 @@ export function OrdersList() {
   const formatTime = (time: string | null) =>
     time ? new Date(time).toLocaleTimeString('en-AE', { hour: '2-digit', minute: '2-digit' }) : '—';
 
-  if (isLoading && !orders.length) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  // Column definitions
+  const columns: Column<Order>[] = useMemo(() => [
+    {
+      key: 'external_order_id',
+      header: 'Order ID',
+      sortable: true,
+      render: (order) => (
+        <span className="font-mono text-sm">{order.external_order_id}</span>
+      ),
+    },
+    {
+      key: 'platform_id',
+      header: 'Platform',
+      sortable: true,
+      render: (order) => (
+        <span className="text-heading font-medium">
+          {(order.platform as { name: string } | null)?.name || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'employee_id',
+      header: 'Rider',
+      sortable: true,
+      render: (order) => (
+        (order.employee as { full_name: string } | null)?.full_name || (
+          <span className="text-muted">Unassigned</span>
+        )
+      ),
+    },
+    {
+      key: 'order_date',
+      header: 'Date',
+      sortable: true,
+      render: (order) => new Date(order.order_date).toLocaleDateString('en-AE'),
+    },
+    {
+      key: 'pickup_time',
+      header: 'Time',
+      sortable: true,
+      render: (order) => formatTime(order.pickup_time),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      render: (order) => <OrderStatusBadge status={order.status} />,
+    },
+    {
+      key: 'total_revenue',
+      header: 'Amount',
+      sortable: true,
+      className: 'text-right',
+      render: (order) => (
+        <span className="font-medium">{formatCurrency(order.total_revenue)}</span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (order) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <Link href={`/dashboard/orders/${order.id}`}>
+            <Button variant="ghost" size="sm">View</Button>
+          </Link>
+        </div>
+      ),
+    },
+  ], []);
 
-  if (error) {
-    return (
-      <Card className="p-6">
-        <p className="text-error">Failed to load orders: {error.message}</p>
-        <Button variant="outline" onClick={() => refetch()} className="mt-4">
-          Retry
-        </Button>
-      </Card>
-    );
-  }
+  const statusOptions = Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  }));
+
+  const handleRowClick = (order: Order) => {
+    router.push(`/dashboard/orders/${order.id}`);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <Input
-          placeholder="Search by order ID..."
-          value={filters.search || ''}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="max-w-sm"
-        />
-        <select
-          value={filters.status || 'all'}
-          onChange={(e) => handleStatusFilter(e.target.value as OrderStatus | 'all')}
-          className="rounded-md border border-border bg-input px-3 py-2 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="all">All Status</option>
-          {Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-        <Input
-          type="date"
-          value={filters.date || ''}
-          onChange={(e) => setFilters(prev => ({ ...prev, date: e.target.value || undefined }))}
-          className="w-40"
-        />
-      </div>
-
-      {/* Results count */}
-      <div className="text-sm text-muted">
-        {ordersResult?.count ?? 0} orders found
-        {isLoading && <Spinner size="sm" className="ml-2 inline-block" />}
-      </div>
-
-      {/* Table */}
-      <Card>
-        {orders.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-muted">No orders found matching your filters.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Rider</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono text-sm">
-                      {order.external_order_id}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-heading font-medium">
-                        {(order.platform as { name: string } | null)?.name || '—'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {(order.employee as { full_name: string } | null)?.full_name || (
-                        <span className="text-muted">Unassigned</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(order.order_date).toLocaleDateString('en-AE')}
-                    </TableCell>
-                    <TableCell>
-                      {formatTime(order.pickup_time)}
-                    </TableCell>
-                    <TableCell>
-                      <OrderStatusBadge status={order.status} />
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(order.total_revenue)}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/orders/${order.id}`}>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </Card>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+    <DataTable
+      data={(result?.data || []) as Order[]}
+      columns={columns}
+      getRowKey={(order) => order.id}
+      loading={isLoading}
+      error={error?.message}
+      emptyMessage={search || filters.status || filters.date 
+        ? "No orders match your filters."
+        : "No orders found."
+      }
+      searchPlaceholder="Search by order ID..."
+      searchValue={search}
+      onSearch={(v) => { setSearch(v); setPage(1); }}
+      pagination={{
+        page,
+        pageSize,
+        totalPages: result?.totalPages || 1,
+        totalCount: result?.count,
+      }}
+      onPageChange={setPage}
+      sort={{ column: sortColumn, direction: sortDirection }}
+      onSort={handleSort}
+      onRowClick={handleRowClick}
+      onRetry={refetch}
+      filters={
+        <FilterBar>
+          <FilterSelect
+            label="All Status"
+            value={filters.status || ''}
+            onChange={(v) => { 
+              setFilters(prev => ({ ...prev, status: v as OrderStatus || undefined })); 
+              setPage(1); 
+            }}
+            options={statusOptions}
+          />
+          <Input
+            type="date"
+            value={filters.date || ''}
+            onChange={(e) => { 
+              setFilters(prev => ({ ...prev, date: e.target.value || undefined })); 
+              setPage(1); 
+            }}
+            className="w-40"
+          />
+        </FilterBar>
+      }
+    />
   );
 }
 
@@ -200,12 +190,12 @@ export function OrdersList() {
  * Order status badge component.
  */
 function OrderStatusBadge({ status }: { status: OrderStatus }) {
-  const variants: Record<OrderStatus, 'success' | 'warning' | 'destructive' | 'secondary' | 'default'> = {
+  const variants: Record<OrderStatus, 'success' | 'warning' | 'error' | 'outline' | 'default'> = {
     completed: 'success',
     pending: 'warning',
-    cancelled: 'destructive',
-    returned: 'secondary',
-    disputed: 'destructive',
+    cancelled: 'error',
+    returned: 'outline',
+    disputed: 'error',
   };
 
   return (

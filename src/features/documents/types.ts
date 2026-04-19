@@ -128,6 +128,20 @@ export interface RequiredDocumentType {
 }
 
 /**
+ * Document checklist template.
+ */
+export interface DocumentChecklist {
+  id: string;
+  organization_id: string;
+  checklist_name: string;
+  description: string | null;
+  role: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Document checklist item (from get_employee_document_checklist function).
  */
 export interface DocumentChecklistItem {

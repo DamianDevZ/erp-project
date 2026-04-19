@@ -1,3 +1,4 @@
+import { PageHeader, PageContent } from '@/components/ui';
 import { AssetForm } from '../AssetForm';
 
 /**
@@ -5,13 +6,17 @@ import { AssetForm } from '../AssetForm';
  */
 export default function NewAssetPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-heading">Add Asset</h1>
-        <p className="text-muted">Add a new vehicle or equipment.</p>
-      </div>
-
+    <PageContent className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Add Asset"
+        description="Add a new vehicle or equipment."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Assets', href: '/dashboard/assets' },
+          { label: 'New Asset' },
+        ]}
+      />
       <AssetForm />
-    </div>
+    </PageContent>
   );
 }

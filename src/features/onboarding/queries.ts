@@ -1,15 +1,16 @@
 'use client';
 
 import { useQuery, useMutation } from '@/lib/supabase/hooks';
-import type {
-  RiderOnboarding,
-  OnboardingStep,
-  OnboardingStatus,
-} from './types';
+import type { OnboardingStep } from '../employees/types';
+import type { OnboardingChecklist } from './types';
 
 // ============================================================================
 // ONBOARDING HOOKS
 // ============================================================================
+
+// Type alias for compatibility
+type RiderOnboarding = OnboardingChecklist;
+type OnboardingStatus = OnboardingStep;
 
 export interface OnboardingFilters {
   status?: OnboardingStatus;
@@ -144,8 +145,8 @@ export function useUpdateOnboardingStatus() {
         updated_at: new Date().toISOString(),
       };
 
-      if (status === 'completed') {
-        updates.completed_at = new Date().toISOString();
+      if (status === 'activated') {
+        updates.activated_at = new Date().toISOString();
       }
 
       const { data, error } = await supabase

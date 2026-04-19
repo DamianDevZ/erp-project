@@ -2,9 +2,18 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Spinner } from '@/components/ui';
+import { 
+  Card, CardHeader, CardTitle, CardContent, 
+  Button, Badge, Spinner,
+  PageHeader, PageContent, DetailRow,
+} from '@/components/ui';
 import { useOrder } from '@/features/orders/queries';
-import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, type OrderStatus } from '@/features/orders';
+import { 
+  ORDER_STATUS_LABELS, 
+  ORDER_TYPE_LABELS, 
+  type OrderStatus,
+  type OrderWithRelations,
+} from '@/features/orders';
 
 /**
  * Order detail page.
@@ -15,7 +24,11 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const orderId = params.id as string;
   
-  const { data: order, isLoading, error } = useOrder(orderId);
+  const { data: order, isLoading, error } = useOrder(orderId) as { 
+    data: OrderWithRelations | null; 
+    isLoading: boolean; 
+    error: Error | null;
+  };
 
   const formatCurrency = (amount: number | null) =>
     amount != null
@@ -35,43 +48,48 @@ export default function OrderDetailPage() {
 
   if (error || !order) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-heading">Order Not Found</h1>
-          <p className="text-muted">The order you're looking for doesn't exist or has been removed.</p>
-        </div>
+      <PageContent>
+        <PageHeader
+          title="Order Not Found"
+          description="The order you're looking for doesn't exist or has been removed."
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Orders', href: '/dashboard/orders' },
+          ]}
+        />
         <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
+      </PageContent>
     );
   }
 
-  const statusVariants: Record<OrderStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
+  const statusVariants: Record<OrderStatus, 'success' | 'warning' | 'error' | 'outline'> = {
     completed: 'success',
     pending: 'warning',
-    cancelled: 'destructive',
-    returned: 'secondary',
-    disputed: 'destructive',
+    cancelled: 'error',
+    returned: 'outline',
+    disputed: 'error',
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-heading">Order #{order.external_order_id}</h1>
+    <PageContent>
+      <PageHeader
+        title={`Order #${order.external_order_id}`}
+        description={
+          <div className="flex items-center gap-2 mt-1">
             <Badge variant={statusVariants[order.status]}>
               {ORDER_STATUS_LABELS[order.status]}
             </Badge>
+            <span className="text-muted">
+              {(order.platform as { name: string } | null)?.name || 'Unknown Platform'} · {order.order_date}
+            </span>
           </div>
-          <p className="text-muted">
-            {(order.platform as { name: string } | null)?.name || 'Unknown Platform'} · {order.order_date}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.back()}>Back</Button>
-        </div>
-      </div>
+        }
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Orders', href: '/dashboard/orders' },
+          { label: `#${order.external_order_id}` },
+        ]}
+      />
 
       {/* Order details */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -151,26 +169,6 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
 
-        {/* COD Details */}
-        {order.cod_amount > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Cash on Delivery</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <DetailRow label="COD Amount" value={formatCurrency(order.cod_amount)} />
-              <DetailRow 
-                label="COD Status" 
-                value={
-                  <Badge variant={order.cod_collected ? 'success' : 'warning'}>
-                    {order.cod_collected ? 'Collected' : 'Pending'}
-                  </Badge>
-                } 
-              />
-            </CardContent>
-          </Card>
-        )}
-
         {/* Processing Status */}
         <Card>
           <CardHeader>
@@ -188,7 +186,7 @@ export default function OrderDetailPage() {
             <DetailRow 
               label="Payroll Processed" 
               value={
-                <Badge variant={order.payroll_processed ? 'success' : 'secondary'}>
+                <Badge variant={order.payroll_processed ? 'success' : 'outline'}>
                   {order.payroll_processed ? 'Yes' : 'No'}
                 </Badge>
               } 
@@ -196,7 +194,7 @@ export default function OrderDetailPage() {
             <DetailRow 
               label="Invoice Processed" 
               value={
-                <Badge variant={order.invoice_processed ? 'success' : 'secondary'}>
+                <Badge variant={order.invoice_processed ? 'success' : 'outline'}>
                   {order.invoice_processed ? 'Yes' : 'No'}
                 </Badge>
               } 
@@ -204,15 +202,6 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="text-sm font-medium text-heading text-right ml-4">{value}</span>
-    </div>
+    </PageContent>
   );
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge, PageHeader, PageContent } from '@/components/ui';
 import { AssetOwnershipBadge } from '@/features/assets';
 
 interface Props {
@@ -26,27 +26,29 @@ export default async function AssetDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <PageContent>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-heading">{asset.name}</h1>
-          <div className="mt-1 flex items-center gap-2">
+      <PageHeader
+        title={asset.name}
+        description={
+          <div className="flex items-center gap-2 mt-1">
             <AssetOwnershipBadge ownership={asset.ownership} />
             <Badge variant={asset.is_active ? 'success' : 'error'}>
               {asset.is_active ? 'Active' : 'Inactive'}
             </Badge>
           </div>
-        </div>
-        <div className="flex gap-2">
+        }
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Assets', href: '/dashboard/assets' },
+          { label: asset.name },
+        ]}
+        actions={
           <Link href={`/dashboard/assets/${id}/edit`}>
             <Button>Edit</Button>
           </Link>
-          <Link href="/dashboard/assets">
-            <Button variant="outline">Back</Button>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* Asset info */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -94,6 +96,6 @@ export default async function AssetDetailPage({ params }: Props) {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContent>
   );
 }

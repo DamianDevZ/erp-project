@@ -15,6 +15,9 @@ import {
   Spinner,
   Input,
   Badge,
+  FilterBar,
+  FilterSelect,
+  StatsGrid,
 } from '@/components/ui';
 import { 
   Shift, 
@@ -146,7 +149,7 @@ export function ShiftList() {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <FilterBar>
         <Input
           placeholder="Search by employee or client..."
           value={search}
@@ -159,44 +162,35 @@ export function ShiftList() {
           onChange={(e) => setDateFilter(e.target.value)}
           className="max-w-[180px]"
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ShiftStatus | 'all')}
-          className="rounded-md border border-border bg-input px-3 py-2 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="all">All Statuses</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="no_show">No Show</option>
-        </select>
-      </div>
+        <FilterSelect
+          label="All Statuses"
+          value={statusFilter === 'all' ? '' : statusFilter}
+          onChange={(v) => setStatusFilter(v === '' ? 'all' : v as ShiftStatus)}
+          options={[
+            { value: 'scheduled', label: 'Scheduled' },
+            { value: 'in_progress', label: 'In Progress' },
+            { value: 'completed', label: 'Completed' },
+            { value: 'cancelled', label: 'Cancelled' },
+            { value: 'no_show', label: 'No Show' },
+          ]}
+        />
+      </FilterBar>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted">This Week</p>
-          <p className="text-2xl font-bold text-heading">{shifts.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted">Scheduled</p>
-          <p className="text-2xl font-bold text-blue-600">{shifts.filter(s => s.status === 'scheduled').length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted">Completed</p>
-          <p className="text-2xl font-bold text-green-600">{shifts.filter(s => s.status === 'completed').length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted">Total Hours</p>
-          <p className="text-2xl font-bold text-purple-600">
-            {shifts
+      <StatsGrid
+        stats={[
+          { label: 'This Week', value: shifts.length },
+          { label: 'Scheduled', value: shifts.filter(s => s.status === 'scheduled').length },
+          { label: 'Completed', value: shifts.filter(s => s.status === 'completed').length },
+          { 
+            label: 'Total Hours', 
+            value: `${shifts
               .filter(s => s.status === 'completed')
               .reduce((sum, s) => sum + calculateShiftHours(s.start_time, s.end_time, s.break_minutes), 0)
-              .toFixed(1)}h
-          </p>
-        </Card>
-      </div>
+              .toFixed(1)}h`
+          },
+        ]}
+      />
 
       {/* Shifts by Date */}
       {Object.keys(shiftsByDate).length === 0 ? (

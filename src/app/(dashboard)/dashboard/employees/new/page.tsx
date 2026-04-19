@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader, PageContent } from '@/components/ui';
 import { EmployeeForm } from '../EmployeeForm';
 
 /**
@@ -14,13 +15,17 @@ export default async function NewEmployeePage() {
     .order('full_name');
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-heading">Add Employee</h1>
-        <p className="text-muted">Create a new employee record.</p>
-      </div>
-
+    <PageContent className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Add Employee"
+        description="Create a new employee record."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Employees', href: '/dashboard/employees' },
+          { label: 'New Employee' },
+        ]}
+      />
       <EmployeeForm employees={employees || []} />
-    </div>
+    </PageContent>
   );
 }

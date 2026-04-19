@@ -1,7 +1,11 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui';
+import { 
+  Card, CardHeader, CardTitle, CardContent, 
+  Button, Badge,
+  PageHeader, PageContent, DetailLayout, DetailCard, DetailItem, DetailGrid,
+} from '@/components/ui';
 import { EmployeeStatusBadge, EmployeeRoleBadge } from '@/features/employees';
 
 interface Props {
@@ -52,30 +56,32 @@ export default async function EmployeeDetailPage({ params }: Props) {
   const activeAssignments = assignments?.filter(a => a.status === 'active') || [];
 
   return (
-    <div className="space-y-6">
+    <PageContent>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-heading">{employee.full_name}</h1>
+      <PageHeader
+        title={employee.full_name}
+        description={
+          <div className="flex items-center gap-2 mt-1">
+            <EmployeeRoleBadge role={employee.role} />
+            <EmployeeStatusBadge status={employee.status} />
             {employee.employee_id && (
               <Badge variant="outline">{employee.employee_id}</Badge>
             )}
           </div>
-          <div className="mt-1 flex items-center gap-2">
-            <EmployeeRoleBadge role={employee.role} />
-            <EmployeeStatusBadge status={employee.status} />
+        }
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Employees', href: '/dashboard/employees' },
+          { label: employee.full_name },
+        ]}
+        actions={
+          <div className="flex gap-2">
+            <Link href={`/dashboard/employees/${id}/edit`}>
+              <Button>Edit</Button>
+            </Link>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/dashboard/employees/${id}/edit`}>
-            <Button>Edit</Button>
-          </Link>
-          <Link href="/dashboard/employees">
-            <Button variant="outline">Back</Button>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* Employee info - Contact & Employment with Platform Assignments */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -251,6 +257,6 @@ export default async function EmployeeDetailPage({ params }: Props) {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContent>
   );
 }

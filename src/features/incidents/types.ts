@@ -387,15 +387,6 @@ export interface ReportBreakdownInput {
 }
 
 /**
- * Input for dispatching spare vehicle.
- */
-export interface DispatchSpareVehicleInput {
-  incident_id: string;
-  spare_vehicle_id: string;
-  notes?: string;
-}
-
-/**
  * Input for acknowledging a breakdown.
  */
 export interface AcknowledgeBreakdownInput {

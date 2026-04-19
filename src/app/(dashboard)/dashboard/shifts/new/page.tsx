@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { PageHeader, PageContent } from '@/components/ui';
 import { ShiftForm } from '../ShiftForm';
 
 /**
@@ -6,22 +6,17 @@ import { ShiftForm } from '../ShiftForm';
  */
 export default function NewShiftPage() {
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <div className="flex items-center gap-2 text-sm text-muted mb-2">
-          <Link href="/dashboard/shifts" className="hover:text-heading">
-            Shifts
-          </Link>
-          <span>/</span>
-          <span>New</span>
-        </div>
-        <h1 className="text-2xl font-bold text-heading">Create Shift</h1>
-        <p className="text-muted">Schedule a new shift for an employee.</p>
-      </div>
-
-      {/* Form */}
+    <PageContent className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Create Shift"
+        description="Schedule a new shift for an employee."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Shifts', href: '/dashboard/shifts' },
+          { label: 'New Shift' },
+        ]}
+      />
       <ShiftForm />
-    </div>
+    </PageContent>
   );
 }

@@ -136,7 +136,7 @@ export function DashboardMetricsGrid() {
         value={metrics ? formatCurrency(metrics.pending_cod_remittance) : '—'}
         subtitle="To be remitted"
         loading={metricsLoading}
-        variant={metrics?.pending_cod_remittance > 10000 ? 'warning' : 'default'}
+        variant={(metrics?.pending_cod_remittance ?? 0) > 10000 ? 'warning' : 'default'}
         icon={<CashIcon />}
       />
       <MetricCard

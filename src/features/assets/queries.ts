@@ -132,7 +132,7 @@ export function useAvailableVehicles() {
     async (supabase) => {
       const { data, error } = await supabase
         .from('assets')
-        .select('id, name, license_plate, make, model, vehicle_status')
+        .select('*')
         .eq('type', 'vehicle')
         .eq('is_active', true)
         .in('vehicle_status', ['available', 'assigned'])
@@ -225,7 +225,7 @@ export function useMaintenanceDue() {
 
       const { data, error } = await supabase
         .from('assets')
-        .select('id, name, license_plate, next_service_date, next_service_km, odometer_reading')
+        .select('*')
         .eq('type', 'vehicle')
         .eq('is_active', true)
         .or(`next_service_date.lte.${nextWeek},next_service_km.lte.odometer_reading`)

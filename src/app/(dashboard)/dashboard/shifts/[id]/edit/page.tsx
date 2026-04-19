@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Spinner } from '@/components/ui';
+import { Spinner, PageHeader, PageContent } from '@/components/ui';
 import { ShiftForm } from '../../ShiftForm';
 import { Shift } from '@/features/shifts/types';
 
@@ -52,7 +52,7 @@ export default function EditShiftPage() {
   if (error || !shift) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">{error || 'Shift not found'}</p>
+        <p className="text-error">{error || 'Shift not found'}</p>
         <Link href="/dashboard/shifts" className="text-primary hover:underline mt-4 inline-block">
           Back to Shifts
         </Link>
@@ -61,22 +61,17 @@ export default function EditShiftPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <div className="flex items-center gap-2 text-sm text-muted mb-2">
-          <Link href="/dashboard/shifts" className="hover:text-heading">
-            Shifts
-          </Link>
-          <span>/</span>
-          <span>Edit</span>
-        </div>
-        <h1 className="text-2xl font-bold text-heading">Edit Shift</h1>
-        <p className="text-muted">Update the shift details.</p>
-      </div>
-
-      {/* Form */}
+    <PageContent className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Edit Shift"
+        description="Update the shift details."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Shifts', href: '/dashboard/shifts' },
+          { label: 'Edit Shift' },
+        ]}
+      />
       <ShiftForm shift={shift} isEditing />
-    </div>
+    </PageContent>
   );
 }

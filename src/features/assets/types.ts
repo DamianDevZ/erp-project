@@ -170,6 +170,36 @@ export interface RentalCompany {
 }
 
 /**
+ * Maintenance types for assets
+ */
+export type MaintenanceType = 'oil_change' | 'repair' | 'inspection' | 'tire_rotation' | 'brake_service' | 'general_service' | 'other';
+
+export const MAINTENANCE_TYPE_LABELS: Record<MaintenanceType, string> = {
+  oil_change: 'Oil Change',
+  repair: 'Repair',
+  inspection: 'Inspection',
+  tire_rotation: 'Tire Rotation',
+  brake_service: 'Brake Service',
+  general_service: 'General Service',
+  other: 'Other',
+};
+
+/**
+ * Asset maintenance record.
+ */
+export interface AssetMaintenance {
+  id: string;
+  organization_id: string;
+  asset_id: string;
+  type: MaintenanceType;
+  description: string | null;
+  cost: number | null;
+  performed_at: string | null;
+  next_due_at: string | null;
+  created_at: string;
+}
+
+/**
  * Asset rental contract.
  */
 export interface AssetRental {

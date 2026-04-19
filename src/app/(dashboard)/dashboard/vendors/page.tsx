@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader, PageContent } from '@/components/ui';
 import { VendorList } from './VendorList';
 
 export const dynamic = 'force-dynamic';
@@ -22,17 +23,16 @@ export default async function VendorsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-heading">Vendors & Suppliers</h1>
-        <p className="text-muted">
-          Manage suppliers for equipment, staffing, maintenance, and other services
-        </p>
-      </div>
-
-      {/* Vendor List */}
+    <PageContent>
+      <PageHeader
+        title="Vendors & Suppliers"
+        description="Manage suppliers for equipment, staffing, maintenance, and other services"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Vendors' },
+        ]}
+      />
       <VendorList vendors={vendors || []} />
-    </div>
+    </PageContent>
   );
 }

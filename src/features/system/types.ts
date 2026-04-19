@@ -600,40 +600,4 @@ export interface ActivityItem {
 // ============================================================================
 // EXPORTS
 // ============================================================================
-
-export type {
-  AuditLog,
-  AuditChange,
-  AuditLogFilter,
-  Notification,
-  NotificationTemplate,
-  TemplateVariable,
-  CreateNotificationRequest,
-  OrganizationSetting,
-  SettingDefinition,
-  SettingsCategory,
-  ApiKey,
-  CreateApiKeyRequest,
-  CreateApiKeyResponse,
-  ApiKeyScope,
-  Integration,
-  IntegrationLog,
-  IntegrationProvider,
-  CredentialField,
-  ScheduledJob,
-  JobExecution,
-  CreateJobRequest,
-  FileUpload,
-  UploadRequest,
-  UploadProgress,
-  DataBatch,
-  BatchError,
-  ColumnMapping,
-  BatchOptions,
-  ImportPreview,
-  SystemHealthMetrics,
-  SystemStatus,
-  ServiceStatus,
-  UserPreferences,
-  ActivityItem,
-};
+// All types are exported inline with their definitions above.

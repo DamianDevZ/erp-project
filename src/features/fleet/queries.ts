@@ -192,8 +192,8 @@ export function useVehicle(id: string | null) {
         .select(`
           *,
           current_employee:employees(id, full_name),
-          maintenance_records:maintenance_records(*)::order(scheduled_date.desc)::limit(10),
-          fuel_records:fuel_records(*)::order(filled_at.desc)::limit(10)
+          maintenance_records:maintenance_records(*),
+          fuel_records:fuel_records(*)
         `)
         .eq('id', id)
         .single();

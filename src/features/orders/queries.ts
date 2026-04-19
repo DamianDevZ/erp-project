@@ -155,8 +155,11 @@ export function useOrderStats(dateFrom: string, dateTo: string, platformId?: str
       data?.forEach(o => {
         if (o.employee_id) {
           if (!riderCounts[o.employee_id]) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const employees = o.employees as any;
+            const employeeName = employees?.full_name || 'Unknown';
             riderCounts[o.employee_id] = { 
-              name: (o.employees as { full_name: string })?.full_name || 'Unknown', 
+              name: employeeName, 
               count: 0 
             };
           }

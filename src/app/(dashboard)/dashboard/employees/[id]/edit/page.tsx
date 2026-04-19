@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader, PageContent } from '@/components/ui';
 import { EmployeeForm } from '../../EmployeeForm';
 
 interface Props {
@@ -31,13 +32,18 @@ export default async function EditEmployeePage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-heading">Edit Employee</h1>
-        <p className="text-muted">Update employee information.</p>
-      </div>
-
+    <PageContent className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Edit Employee"
+        description="Update employee information."
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Employees', href: '/dashboard/employees' },
+          { label: employeeResult.data.full_name, href: `/dashboard/employees/${id}` },
+          { label: 'Edit' },
+        ]}
+      />
       <EmployeeForm employee={employeeResult.data} employees={employeesResult.data || []} />
-    </div>
+    </PageContent>
   );
 }
