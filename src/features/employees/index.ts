@@ -9,5 +9,7 @@
 
 export * from './types';
 export * from './components';
+export * from './eligibility';
+export * from './expiry-alerts';
 // export * from './actions';
 // export * from './hooks';
