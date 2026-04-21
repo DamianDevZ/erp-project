@@ -22,22 +22,27 @@ import {
   type Invoice,
   type InvoiceStatus,
 } from '@/features/invoicing';
+import { useOptionalClientContext } from '@/contexts/ClientContext';
 
-interface InvoiceWithPlatform extends Invoice {
-  platform?: { name: string };
+interface InvoiceWithClient extends Invoice {
+  client?: { name: string };
 }
 
 /**
  * Client component that fetches and displays invoices.
  */
 export function InvoiceList() {
-  const [invoices, setInvoices] = useState<InvoiceWithPlatform[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceWithClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
   const [sortKey, setSortKey] = useState<string | null>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Get client filter from context
+  const clientContext = useOptionalClientContext();
+  const clientIds = clientContext?.getClientFilter() ?? null;
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -51,17 +56,24 @@ export function InvoiceList() {
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [clientIds]);
 
   async function fetchInvoices() {
     try {
       setLoading(true);
       const supabase = createClient();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('invoices')
-        .select('*, platform:platforms(name)')
+        .select('*, client:clients(name)')
         .order('created_at', { ascending: false });
+
+      // Filter by client IDs
+      if (clientIds && clientIds.length > 0) {
+        query = query.in('client_id', clientIds);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setInvoices(data || []);
@@ -77,7 +89,7 @@ export function InvoiceList() {
     .filter((invoice) => {
       const matchesSearch = 
         invoice.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
-        invoice.platform?.name.toLowerCase().includes(search.toLowerCase());
+        invoice.client?.name.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
@@ -87,9 +99,9 @@ export function InvoiceList() {
       let aVal: string | number | null | undefined;
       let bVal: string | number | null | undefined;
       
-      if (sortKey === 'platform') {
-        aVal = a.platform?.name;
-        bVal = b.platform?.name;
+      if (sortKey === 'client') {
+        aVal = a.client?.name;
+        bVal = b.client?.name;
       } else {
         aVal = a[sortKey as keyof Invoice] as string | number | null | undefined;
         bVal = b[sortKey as keyof Invoice] as string | number | null | undefined;
@@ -136,7 +148,7 @@ export function InvoiceList() {
       {/* Filters */}
       <div className="flex flex-wrap gap-4">
         <Input
-          placeholder="Search by invoice # or platform..."
+          placeholder="Search by invoice # or client..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -176,7 +188,7 @@ export function InvoiceList() {
             <TableHeader>
               <TableRow>
                 <SortableTableHead sortKey="invoice_number" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Invoice #</SortableTableHead>
-                <SortableTableHead sortKey="platform" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Platform</SortableTableHead>
+                <SortableTableHead sortKey="client" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Client</SortableTableHead>
                 <SortableTableHead sortKey="period_start" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Period</SortableTableHead>
                 <SortableTableHead sortKey="subtotal" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Subtotal</SortableTableHead>
                 <SortableTableHead sortKey="tax_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Tax</SortableTableHead>
@@ -193,7 +205,7 @@ export function InvoiceList() {
                     {invoice.invoice_number}
                   </TableCell>
                   <TableCell className="text-body">
-                    {invoice.platform?.name || '—'}
+                    {invoice.client?.name || '—'}
                   </TableCell>
                   <TableCell className="text-muted">
                     {formatDate(invoice.period_start)} – {formatDate(invoice.period_end)}

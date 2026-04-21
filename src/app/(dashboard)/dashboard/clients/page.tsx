@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { Button, PageHeader, PageContent } from '@/components/ui';
-import { PlatformList } from './PlatformList';
+import { ClientList } from './ClientList';
 
 /**
  * Clients list page.
- * Shows all clients with actions.
+ * Shows all clients (delivery services) with actions.
  */
-export default function PlatformsPage() {
+export default function ClientsPage() {
   return (
     <PageContent>
       <PageHeader
@@ -17,12 +17,12 @@ export default function PlatformsPage() {
           { label: 'Clients' },
         ]}
         actions={
-          <Link href="/dashboard/platforms/new">
+          <Link href="/dashboard/clients/new">
             <Button>Add Client</Button>
           </Link>
         }
       />
-      <PlatformList />
+      <ClientList />
     </PageContent>
   );
 }

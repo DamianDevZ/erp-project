@@ -6,7 +6,7 @@ import {
   Button, Badge,
   PageHeader, PageContent, DetailLayout, DetailCard, DetailItem, DetailGrid,
 } from '@/components/ui';
-import { EmployeeStatusBadge, EmployeeRoleBadge } from '@/features/employees';
+import { EmployeeStatusBadge, EmployeeRoleBadge, ClientAssignmentSection } from '@/features/employees';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -19,7 +19,7 @@ export default async function EmployeeDetailPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [employeeResult, coachingsResult, assignmentsResult, documentsResult] = await Promise.all([
+  const [employeeResult, coachingsResult, assignmentsResult, documentsResult, clientAssignmentsResult, clientsResult] = await Promise.all([
     supabase
       .from('employees')
       .select('*')
@@ -41,12 +41,24 @@ export default async function EmployeeDetailPage({ params }: Props) {
       .select('*')
       .eq('employee_id', id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('client_assignments')
+      .select('*, client:clients(id, name, status)')
+      .eq('employee_id', id)
+      .order('start_date', { ascending: false }),
+    supabase
+      .from('clients')
+      .select('id, name, status')
+      .eq('status', 'active')
+      .order('name'),
   ]);
 
   const { data: employee, error } = employeeResult;
   const { data: coachings } = coachingsResult;
   const { data: assignments } = assignmentsResult;
   const { data: documents } = documentsResult;
+  const { data: clientAssignments } = clientAssignmentsResult;
+  const { data: clients } = clientsResult;
 
   if (error || !employee) {
     notFound();
@@ -129,7 +141,7 @@ export default async function EmployeeDetailPage({ params }: Props) {
               </div>
             )}
             <div>
-              <p className="text-sm text-muted">Client Assignments</p>
+              <p className="text-sm text-muted">Platform Assignments</p>
               {activeAssignments.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {activeAssignments.map((assignment) => (
@@ -139,12 +151,28 @@ export default async function EmployeeDetailPage({ params }: Props) {
                   ))}
                 </div>
               ) : (
-                <p className="font-medium text-heading">No active assignments</p>
+                <p className="font-medium text-heading">No active platforms</p>
               )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Client Assignments */}
+      <ClientAssignmentSection
+        employeeId={id}
+        organizationId={employee.organization_id}
+        assignments={(clientAssignments || []) as Array<{
+          id: string;
+          client_id: string;
+          start_date: string;
+          end_date: string | null;
+          status: string;
+          role: string | null;
+          client: { id: string; name: string; status: string };
+        }>}
+        availableClients={(clients || []) as Array<{ id: string; name: string; status: string }>}
+      />
 
       {/* History & Attachments - 70/30 split */}
       <div className="grid gap-6 lg:grid-cols-[7fr_3fr]">

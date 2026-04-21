@@ -64,7 +64,7 @@ export function CourseForm({ course }: CourseFormProps) {
   const [provider, setProvider] = useState(course?.provider || '');
   const [externalUrl, setExternalUrl] = useState(course?.external_url || '');
   const [costPerPerson, setCostPerPerson] = useState(course?.cost_per_person?.toString() || '');
-  const [currency, setCurrency] = useState(course?.currency || 'AED');
+  const [currency, setCurrency] = useState(course?.currency || 'BHD');
   const [isActive, setIsActive] = useState(course?.is_active ?? true);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -332,7 +332,7 @@ export function CourseForm({ course }: CourseFormProps) {
                   onChange={(e) => setCurrency(e.target.value)}
                   className="rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="AED">AED</option>
+                  <option value="BHD">AED</option>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                   <option value="GBP">GBP</option>

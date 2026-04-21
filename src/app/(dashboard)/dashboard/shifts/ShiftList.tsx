@@ -25,6 +25,7 @@ import {
   SHIFT_STATUS_LABELS,
   calculateShiftHours,
 } from '@/features/shifts/types';
+import { useOptionalClientContext } from '@/contexts/ClientContext';
 
 const STATUS_COLORS: Record<ShiftStatus, 'default' | 'success' | 'warning' | 'error' | 'outline'> = {
   scheduled: 'default',
@@ -45,9 +46,13 @@ export function ShiftList() {
   const [statusFilter, setStatusFilter] = useState<ShiftStatus | 'all'>('all');
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
 
+  // Get client filter from context
+  const clientContext = useOptionalClientContext();
+  const clientIds = clientContext?.getClientFilter() ?? null;
+
   useEffect(() => {
     fetchShifts();
-  }, [dateFilter]);
+  }, [dateFilter, clientIds]);
 
   async function fetchShifts() {
     try {
@@ -58,8 +63,8 @@ export function ShiftList() {
         .from('shifts')
         .select(`
           *,
-          employee:employees!shifts_employee_id_fkey(id, full_name, employee_id),
-          platform:platforms!shifts_platform_id_fkey(id, name)
+          employee:employees(id, full_name, employee_id),
+          client:clients(id, name)
         `)
         .order('shift_date', { ascending: true })
         .order('start_time', { ascending: true });
@@ -72,6 +77,11 @@ export function ShiftList() {
         query = query
           .gte('shift_date', startDate.toISOString().split('T')[0])
           .lte('shift_date', endDate.toISOString().split('T')[0]);
+      }
+
+      // Filter by client IDs
+      if (clientIds && clientIds.length > 0) {
+        query = query.in('client_id', clientIds);
       }
 
       const { data, error } = await query;
@@ -114,7 +124,7 @@ export function ShiftList() {
     const matchesSearch = 
       shift.employee?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       shift.employee?.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
-      shift.platform?.name?.toLowerCase().includes(search.toLowerCase());
+      shift.client?.name?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || shift.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -228,7 +238,7 @@ export function ShiftList() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm">{shift.platform?.name || '-'}</span>
+                        <span className="text-sm">{shift.client?.name || '-'}</span>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">

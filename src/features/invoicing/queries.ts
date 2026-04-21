@@ -9,7 +9,8 @@ import type { Invoice, InvoiceStatus, InvoiceLineItem } from './types';
 // ============================================================================
 
 export interface InvoiceFilters {
-  platform_id?: string;
+  client_id?: string;
+  clientIds?: string[] | null;
   status?: InvoiceStatus;
   period_start?: string;
   period_end?: string;
@@ -27,11 +28,15 @@ export function useInvoices(filters?: InvoiceFilters, pagination?: PaginationPar
         .from('invoices')
         .select(`
           *,
-          platform:platforms(id, name)
+          client:clients(id, name)
         `, { count: 'exact' });
 
-      if (filters?.platform_id) {
-        query = query.eq('platform_id', filters.platform_id);
+      // Filter by client IDs (from header selector)
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        query = query.in('client_id', filters.clientIds);
+      }
+      if (filters?.client_id) {
+        query = query.eq('client_id', filters.client_id);
       }
       if (filters?.status) {
         query = query.eq('status', filters.status);
@@ -87,7 +92,7 @@ export function useInvoice(id: string | null) {
         .from('invoices')
         .select(`
           *,
-          platform:platforms(id, name, contact_email),
+          client:clients(id, name, contact_email),
           line_items:invoice_line_items(
             *,
             employee:employees(id, full_name)

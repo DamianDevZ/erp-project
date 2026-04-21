@@ -1,25 +1,25 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { PlatformForm } from '../../PlatformForm';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { ClientForm } from '../../ClientForm';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Edit platform page.
+ * Edit client page.
  */
-export default async function EditPlatformPage({ params }: Props) {
+export default async function EditClientPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
-  const { data: platform, error } = await supabase
-    .from('platforms')
+  const { data: client, error } = await supabase
+    .from('clients')
     .select('*')
     .eq('id', id)
     .single();
 
-  if (error || !platform) {
+  if (error || !client) {
     notFound();
   }
 
@@ -30,7 +30,7 @@ export default async function EditPlatformPage({ params }: Props) {
         <p className="text-muted">Update client information.</p>
       </div>
 
-      <PlatformForm platform={platform} />
+      <ClientForm client={client} />
     </div>
   );
 }

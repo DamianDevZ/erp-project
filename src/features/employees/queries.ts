@@ -15,6 +15,8 @@ export interface EmployeeFilters {
   rider_category?: RiderCategory;
   department_id?: string;
   search?: string;
+  /** Filter by client IDs - only show employees assigned to these clients */
+  clientIds?: string[] | null;
 }
 
 /**
@@ -27,9 +29,41 @@ export function useEmployees(
 ) {
   return useQuery<PaginatedResult<Employee>>(
     async (supabase) => {
+      // If filtering by clients, first get employee IDs
+      let employeeIdsFromClients: string[] | null = null;
+      
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        const { data: assignments } = await supabase
+          .from('client_assignments')
+          .select('employee_id')
+          .in('client_id', filters.clientIds)
+          .eq('status', 'active');
+        
+        employeeIdsFromClients = [...new Set(assignments?.map(a => a.employee_id) || [])];
+        
+        // If no employees assigned to selected clients, return empty
+        if (employeeIdsFromClients.length === 0) {
+          return {
+            data: {
+              data: [],
+              count: 0,
+              page: pagination?.page || 1,
+              pageSize: pagination?.pageSize || 20,
+              totalPages: 0,
+            },
+            error: null,
+          };
+        }
+      }
+
       let query = supabase
         .from('employees')
         .select('*', { count: 'exact' });
+
+      // Filter by employee IDs from client assignments
+      if (employeeIdsFromClients) {
+        query = query.in('id', employeeIdsFromClients);
+      }
 
       // Apply filters
       if (filters?.status) {

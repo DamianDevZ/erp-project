@@ -13,7 +13,7 @@ export interface WorkLog {
   id: string;
   organization_id: string;
   employee_id: string;
-  platform_id: string;
+  client_id: string;
   work_date: string;
   deliveries_count: number;
   hours_worked: number;
@@ -27,12 +27,12 @@ export interface WorkLog {
 }
 
 /**
- * Invoice to a platform.
+ * Invoice to a client.
  */
 export interface Invoice {
   id: string;
   organization_id: string;
-  platform_id: string;
+  client_id: string;
   invoice_number: string;
   title: string | null;
   period_start: string;

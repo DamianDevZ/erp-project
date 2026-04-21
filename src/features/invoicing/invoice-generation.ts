@@ -345,7 +345,7 @@ export async function createInvoice(input: {
       total,
       amount_paid: 0,
       amount_due: total,
-      currency: 'AED',
+      currency: 'BHD',
       notes: input.notes,
       terms: input.terms,
       created_by: input.createdBy,

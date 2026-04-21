@@ -271,7 +271,7 @@ export function getImportTemplate(entityType: ImportEntityType): ImportTemplate 
             delivery_address: 'Marina Tower 5, Apt 1201',
             order_value: '85.50',
             rider_employee_number: 'EMP001',
-            status: 'delivered',
+            status: 'completed',
             created_at: '2024-01-15',
           },
         ],

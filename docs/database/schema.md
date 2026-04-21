@@ -51,11 +51,15 @@ App users — people who log into the dashboard (admin staff).
 |--------|------|-------------|
 | `id` | UUID | PK, references `auth.users(id)` |
 | `organization_id` | UUID | FK → `organizations` |
+| `employee_id` | UUID | FK → `employees` (optional, links to managed employee record) |
 | `full_name` | TEXT | Display name |
 | `email` | TEXT | Email address |
 | `role` | TEXT | `admin`, `manager`, `hr`, `viewer` |
+| `is_super_admin` | BOOLEAN | Whether user is a super admin |
 | `created_at` | TIMESTAMPTZ | When joined |
 | `updated_at` | TIMESTAMPTZ | Last update |
+
+> **Note**: `employee_id` links dashboard users to their employee record, enabling client assignment filtering. Dashboard users who are also managed employees (e.g., operations managers assigned to specific clients) can have their views filtered based on their client assignments.
 
 ---
 

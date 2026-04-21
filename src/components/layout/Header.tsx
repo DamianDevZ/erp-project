@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui';
+import { GlobalSearch } from './GlobalSearch';
+import { ClientSelector } from './ClientSelector';
 
 interface HeaderProps {
   /** Current user's name or email */
@@ -15,7 +17,7 @@ interface HeaderProps {
 
 /**
  * Top header bar for the dashboard.
- * Shows current context and user actions.
+ * Shows current context, global search, client selector, and user actions.
  */
 export function Header({ userName, organizationName, isAdmin }: HeaderProps) {
   const router = useRouter();
@@ -38,8 +40,16 @@ export function Header({ userName, organizationName, isAdmin }: HeaderProps) {
         ) : null}
       </div>
 
-      {/* Right side - User menu */}
+      {/* Center - Global Search */}
+      <div className="flex-1 flex justify-center mx-4">
+        <GlobalSearch />
+      </div>
+
+      {/* Right side - Client selector + User menu */}
       <div className="flex items-center gap-4">
+        {/* Client selector - shown for all users */}
+        <ClientSelector />
+
         {/* Notifications placeholder */}
         <button className="rounded-lg p-2 text-muted hover:bg-hover hover:text-body">
           <BellIcon className="h-5 w-5" />

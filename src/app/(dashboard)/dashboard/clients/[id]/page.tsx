@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
 
 interface Props {
@@ -8,33 +8,33 @@ interface Props {
 }
 
 /**
- * Platform detail page.
+ * Client detail page.
  */
-export default async function PlatformDetailPage({ params }: Props) {
+export default async function ClientDetailPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
-  const { data: platform, error } = await supabase
-    .from('platforms')
+  const { data: client, error } = await supabase
+    .from('clients')
     .select('*')
     .eq('id', id)
     .single();
 
-  if (error || !platform) {
+  if (error || !client) {
     notFound();
   }
 
-  // Get employee count assigned to this platform
+  // Get employee count assigned to this client
   const { count: assignmentCount } = await supabase
-    .from('platform_assignments')
+    .from('client_assignments')
     .select('*', { count: 'exact', head: true })
-    .eq('platform_id', id)
-    .eq('is_active', true);
+    .eq('client_id', id)
+    .eq('status', 'active');
 
   const formatRate = () => {
-    if (!platform.billing_rate) return 'Not set';
-    const rate = `$${platform.billing_rate}`;
-    switch (platform.billing_rate_type) {
+    if (!client.billing_rate) return 'Not set';
+    const rate = `$${client.billing_rate}`;
+    switch (client.billing_rate_type) {
       case 'per_delivery': return `${rate} per delivery`;
       case 'hourly': return `${rate} per hour`;
       case 'fixed': return `${rate} per period`;
@@ -47,22 +47,22 @@ export default async function PlatformDetailPage({ params }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-heading">{platform.name}</h1>
-          <Badge variant={platform.is_active ? 'success' : 'error'} className="mt-1">
-            {platform.is_active ? 'Active' : 'Inactive'}
+          <h1 className="text-2xl font-bold text-heading">{client.name}</h1>
+          <Badge variant={client.is_active ? 'success' : 'error'} className="mt-1">
+            {client.is_active ? 'Active' : 'Inactive'}
           </Badge>
         </div>
         <div className="flex gap-2">
-          <Link href={`/dashboard/platforms/${id}/edit`}>
+          <Link href={`/dashboard/clients/${id}/edit`}>
             <Button>Edit</Button>
           </Link>
-          <Link href="/dashboard/platforms">
+          <Link href="/dashboard/clients">
             <Button variant="outline">Back</Button>
           </Link>
         </div>
       </div>
 
-      {/* Platform info */}
+      {/* Client info */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -76,7 +76,7 @@ export default async function PlatformDetailPage({ params }: Props) {
             <div>
               <p className="text-sm text-muted">Rate Type</p>
               <p className="text-heading capitalize">
-                {platform.billing_rate_type?.replace('_', ' ') || 'Not set'}
+                {client.billing_rate_type?.replace('_', ' ') || 'Not set'}
               </p>
             </div>
           </CardContent>
@@ -94,7 +94,7 @@ export default async function PlatformDetailPage({ params }: Props) {
             <div>
               <p className="text-sm text-muted">Created</p>
               <p className="text-heading">
-                {new Date(platform.created_at).toLocaleDateString()}
+                {new Date(client.created_at).toLocaleDateString()}
               </p>
             </div>
           </CardContent>

@@ -22,6 +22,7 @@ export interface AssetFilters {
   is_active?: boolean;
   is_spare?: boolean;
   assigned_employee_id?: string;
+  clientIds?: string[] | null;
   search?: string;
 }
 
@@ -35,9 +36,39 @@ export function useAssets(
 ) {
   return useQuery<PaginatedResult<Asset>>(
     async (supabase) => {
+      // If filtering by clients, first get employee IDs assigned to those clients
+      let employeeIdsFromClients: string[] | null = null;
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        const { data: assignments } = await supabase
+          .from('client_assignments')
+          .select('employee_id')
+          .in('client_id', filters.clientIds)
+          .eq('status', 'active');
+        
+        employeeIdsFromClients = [...new Set(assignments?.map(a => a.employee_id) || [])];
+      }
+
       let query = supabase
         .from('assets')
         .select('*', { count: 'exact' });
+
+      // Filter by client (through employee assignments)
+      if (employeeIdsFromClients !== null) {
+        if (employeeIdsFromClients.length === 0) {
+          // No employees for these clients - return empty
+          return {
+            data: {
+              data: [],
+              count: 0,
+              page: pagination?.page || 1,
+              pageSize: pagination?.pageSize || 20,
+              totalPages: 0,
+            },
+            error: null,
+          };
+        }
+        query = query.in('assigned_employee_id', employeeIdsFromClients);
+      }
 
       // Apply filters
       if (filters?.type) {

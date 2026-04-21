@@ -18,6 +18,7 @@ import {
   type AssetOwnership,
 } from '@/features/assets';
 import { useAssets } from '@/features/assets/queries';
+import { useOptionalClientContext } from '@/contexts/ClientContext';
 
 /**
  * Asset list component using reusable DataTable.
@@ -32,12 +33,17 @@ export function AssetList() {
   const [sortColumn, setSortColumn] = useState<string | null>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+  // Get client filter from context
+  const clientContext = useOptionalClientContext();
+  const clientIds = clientContext?.getClientFilter() ?? null;
+
   // Build filters for query
   const filters = useMemo(() => ({
     ownership: ownershipFilter || undefined,
     is_active: activeFilter === '' ? undefined : activeFilter === 'active',
     search: search || undefined,
-  }), [ownershipFilter, activeFilter, search]);
+    clientIds,
+  }), [ownershipFilter, activeFilter, search, clientIds]);
 
   // Fetch assets using data access hook
   const { data: result, isLoading, error, refetch } = useAssets(

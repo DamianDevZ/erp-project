@@ -4,7 +4,7 @@ import { EmployeeList } from './EmployeeList';
 
 /**
  * Employees list page.
- * Shows all employees with filtering and actions.
+ * Shows all employees with filtering, bulk actions, and import/export.
  */
 export default function EmployeesPage() {
   return (
@@ -17,9 +17,13 @@ export default function EmployeesPage() {
           { label: 'Employees' },
         ]}
         actions={
-          <Link href="/dashboard/employees/new">
-            <Button>Add Employee</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Button variant="outline">Import</Button>
+            <Button variant="outline">Export All</Button>
+            <Link href="/dashboard/employees/new">
+              <Button>Add Employee</Button>
+            </Link>
+          </div>
         }
       />
       <EmployeeList />

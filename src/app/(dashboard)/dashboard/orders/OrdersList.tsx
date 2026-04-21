@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { useOrders, type OrderFilters } from '@/features/orders/queries';
 import { ORDER_STATUS_LABELS, type OrderStatus, type OrderWithRelations } from '@/features/orders';
+import { useOptionalClientContext } from '@/contexts/ClientContext';
 
 // NOTE: The query returns OrderWithRelations but useOrders types as Order
 // We use a type alias to match the actual data structure
@@ -31,21 +32,26 @@ export function OrdersList() {
   const [sortColumn, setSortColumn] = useState<string | null>('order_date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // Get client filter from context
+  const clientContext = useOptionalClientContext();
+  const clientIds = clientContext?.getClientFilter() ?? null;
+
   // Build filters for query
   const queryFilters = useMemo(() => ({
     ...filters,
     search: search || undefined,
-  }), [filters, search]);
+    clientIds,
+  }), [filters, search, clientIds]);
 
   const { data: result, isLoading, error, refetch } = useOrders(queryFilters, { page, pageSize });
 
   const formatCurrency = (amount: number | null) =>
     amount != null
-      ? new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(amount)
-      : '—';
+      ? new Intl.NumberFormat('en-BH', { style: 'currency', currency: 'BHD' }).format(amount)
+      : 'â€”';
 
   const formatTime = (time: string | null) =>
-    time ? new Date(time).toLocaleTimeString('en-AE', { hour: '2-digit', minute: '2-digit' }) : '—';
+    time ? new Date(time).toLocaleTimeString('en-BH', { hour: '2-digit', minute: '2-digit' }) : 'â€”';
 
   // Column definitions
   const columns: Column<Order>[] = useMemo(() => [
@@ -58,12 +64,12 @@ export function OrdersList() {
       ),
     },
     {
-      key: 'platform_id',
-      header: 'Platform',
+      key: 'client_id',
+      header: 'Client',
       sortable: true,
       render: (order) => (
         <span className="text-heading font-medium">
-          {(order.platform as { name: string } | null)?.name || '—'}
+          {(order.client as { name: string } | null)?.name || 'â€”'}
         </span>
       ),
     },
@@ -81,7 +87,7 @@ export function OrdersList() {
       key: 'order_date',
       header: 'Date',
       sortable: true,
-      render: (order) => new Date(order.order_date).toLocaleDateString('en-AE'),
+      render: (order) => new Date(order.order_date).toLocaleDateString('en-BH'),
     },
     {
       key: 'pickup_time',

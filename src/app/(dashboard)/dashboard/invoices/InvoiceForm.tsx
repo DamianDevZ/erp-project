@@ -14,7 +14,7 @@ import {
   Spinner,
 } from '@/components/ui';
 import type { Invoice, InvoiceStatus } from '@/features/invoicing';
-import type { Platform } from '@/features/platforms';
+import type { Client } from '@/features/clients';
 
 interface InvoiceFormProps {
   invoice?: Invoice;
@@ -80,12 +80,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [platforms, setPlatforms] = useState<Client[]>([]);
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
 
   const [invoiceNumber, setInvoiceNumber] = useState(invoice?.invoice_number || '');
   const [title, setTitle] = useState(invoice?.title || '');
-  const [platformId, setPlatformId] = useState(invoice?.platform_id || '');
+  const [clientId, setClientId] = useState(invoice?.client_id || '');
   const [periodStart, setPeriodStart] = useState(invoice?.period_start || '');
   const [periodEnd, setPeriodEnd] = useState(invoice?.period_end || '');
   const [status, setStatus] = useState<InvoiceStatus>(invoice?.status || 'draft');
@@ -114,19 +114,20 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     }
   }, []);
 
-  async function fetchPlatforms() {
+  async function fetchClients() {
     try {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from('platforms')
+        .from('clients')
         .select('*')
         .eq('is_active', true)
+        .is('deleted_at', null)
         .order('name');
 
       if (error) throw error;
       setPlatforms(data || []);
     } catch (err) {
-      console.error('Failed to fetch platforms:', err);
+      console.error('Failed to fetch clients:', err);
     } finally {
       setLoadingPlatforms(false);
     }
@@ -289,7 +290,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       const invoiceData = {
         invoice_number: invoiceNumber,
         title: title || null,
-        platform_id: platformId,
+        client_id: clientId,
         period_start: periodStart,
         period_end: periodEnd,
         subtotal: payrollValue,
@@ -381,9 +382,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               />
             </div>
 
-            {/* Platform */}
+            {/* Client */}
             <div className="space-y-2">
-              <Label htmlFor="platformId" required>Client</Label>
+              <Label htmlFor="clientId" required>Client</Label>
               {loadingPlatforms ? (
                 <div className="flex items-center gap-2 py-2">
                   <Spinner size="sm" />
@@ -391,9 +392,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 </div>
               ) : (
                 <select
-                  id="platformId"
-                  value={platformId}
-                  onChange={(e) => setPlatformId(e.target.value)}
+                  id="clientId"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   required
                 >

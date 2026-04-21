@@ -675,7 +675,7 @@ export async function getAllocationSlots(
   
   // Get platform requirements (from platform config)
   const { data: platform } = await supabase
-    .from('platforms')
+    .from('clients')
     .select('name, rider_requirements')
     .eq('id', platformId)
     .single();
@@ -781,7 +781,7 @@ export async function getAllocationSummary(): Promise<AllocationSummary> {
     .eq('shift_date', today);
   
   const { data: platforms } = await supabase
-    .from('platforms')
+    .from('clients')
     .select('id, name, rider_requirements');
   
   const coverageByPlatform: AllocationSummary['coverageByPlatform'] = [];

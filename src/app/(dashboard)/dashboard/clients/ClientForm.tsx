@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient as createSupabaseClient } from '@/lib/supabase/client';
 import {
   Card,
   CardHeader,
@@ -12,10 +12,10 @@ import {
   Input,
   Label,
 } from '@/components/ui';
-import type { Platform, BillingRateType } from '@/features/platforms';
+import type { Client, BillingRateType } from '@/features/clients';
 
-interface PlatformFormProps {
-  platform?: Platform;
+interface ClientFormProps {
+  client?: Client;
 }
 
 // Icons
@@ -36,27 +36,27 @@ function CurrencyIcon({ className }: { className?: string }) {
 }
 
 /**
- * Form for creating or editing a platform.
+ * Form for creating or editing a client (delivery service).
  */
-export function PlatformForm({ platform }: PlatformFormProps) {
+export function ClientForm({ client }: ClientFormProps) {
   const router = useRouter();
-  const isEdit = !!platform;
+  const isEdit = !!client;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [name, setName] = useState(platform?.name || '');
-  const [contactEmail, setContactEmail] = useState(platform?.contact_email || '');
-  const [contactPhone, setContactPhone] = useState(platform?.contact_phone || '');
-  const [vatId, setVatId] = useState(platform?.vat_id || '');
-  const [address, setAddress] = useState(platform?.address || '');
-  const [city, setCity] = useState(platform?.city || '');
-  const [country, setCountry] = useState(platform?.country || '');
-  const [billingRate, setBillingRate] = useState(platform?.billing_rate?.toString() || '');
+  const [name, setName] = useState(client?.name || '');
+  const [contactEmail, setContactEmail] = useState(client?.contact_email || '');
+  const [contactPhone, setContactPhone] = useState(client?.contact_phone || '');
+  const [vatId, setVatId] = useState(client?.vat_id || '');
+  const [address, setAddress] = useState(client?.address || '');
+  const [city, setCity] = useState(client?.city || '');
+  const [country, setCountry] = useState(client?.country || '');
+  const [billingRate, setBillingRate] = useState(client?.billing_rate?.toString() || '');
   const [billingRateType, setBillingRateType] = useState<BillingRateType>(
-    platform?.billing_rate_type || 'per_delivery'
+    client?.billing_rate_type || 'per_delivery'
   );
-  const [isActive, setIsActive] = useState(platform?.is_active ?? true);
+  const [isActive, setIsActive] = useState(client?.is_active ?? true);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,7 +64,7 @@ export function PlatformForm({ platform }: PlatformFormProps) {
     setError(null);
 
     try {
-      const supabase = createClient();
+      const supabase = createSupabaseClient();
 
       const data = {
         name,
@@ -81,23 +81,23 @@ export function PlatformForm({ platform }: PlatformFormProps) {
 
       if (isEdit) {
         const { error } = await supabase
-          .from('platforms')
+          .from('clients')
           .update(data)
-          .eq('id', platform.id);
+          .eq('id', client.id);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('platforms')
+          .from('clients')
           .insert(data);
 
         if (error) throw error;
       }
 
-      router.push('/dashboard/platforms');
+      router.push('/dashboard/clients');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save platform');
+      setError(err instanceof Error ? err.message : 'Failed to save client');
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ export function PlatformForm({ platform }: PlatformFormProps) {
         </div>
       )}
 
-      {/* Platform Information */}
+      {/* Client Information */}
       <Card className="mb-6">
         <CardHeader className="border-b border-border bg-background-subtle">
           <div className="flex items-center gap-3">
@@ -124,15 +124,15 @@ export function PlatformForm({ platform }: PlatformFormProps) {
               <BuildingIcon className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-base">Platform Information</CardTitle>
-              <p className="text-sm text-muted">Delivery platform details</p>
+              <CardTitle className="text-base">Client Information</CardTitle>
+              <p className="text-sm text-muted">Delivery service details</p>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="pt-6">
           <div className="space-y-2">
-            <Label htmlFor="name" required>Platform Name</Label>
+            <Label htmlFor="name" required>Client Name</Label>
             <Input
               id="name"
               value={name}
@@ -140,7 +140,7 @@ export function PlatformForm({ platform }: PlatformFormProps) {
               placeholder="Uber Eats"
               required
             />
-            <p className="text-xs text-muted">The delivery platform your company works with</p>
+            <p className="text-xs text-muted">The delivery service your company works with</p>
           </div>
 
           <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -219,8 +219,8 @@ export function PlatformForm({ platform }: PlatformFormProps) {
                 className="h-5 w-5 rounded border-border accent-primary"
               />
               <div>
-                <Label htmlFor="isActive" className="text-heading font-medium">Active Platform</Label>
-                <p className="text-sm text-muted">Uncheck to mark this platform as inactive</p>
+                <Label htmlFor="isActive" className="text-heading font-medium">Active Client</Label>
+                <p className="text-sm text-muted">Uncheck to mark this client as inactive</p>
               </div>
             </div>
           )}
@@ -279,7 +279,7 @@ export function PlatformForm({ platform }: PlatformFormProps) {
 
           <div className="mt-4 rounded-lg bg-blue-50 p-4">
             <p className="text-sm text-blue-700">
-              <strong>Tip:</strong> The billing rate will be used when generating invoices for this platform.
+              <strong>Tip:</strong> The billing rate will be used when generating invoices for this client.
             </p>
           </div>
         </CardContent>
@@ -296,9 +296,12 @@ export function PlatformForm({ platform }: PlatformFormProps) {
           Cancel
         </Button>
         <Button type="submit" loading={loading}>
-          {isEdit ? 'Save Changes' : 'Create Platform'}
+          {isEdit ? 'Save Changes' : 'Create Client'}
         </Button>
       </div>
     </form>
   );
 }
+
+// Backwards compatibility
+export { ClientForm as PlatformForm };

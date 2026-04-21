@@ -262,7 +262,7 @@ async function getOperationsMetrics(): Promise<OperationsMetrics> {
     const { data: completedOrders } = await supabase
       .from('orders')
       .select('id')
-      .eq('status', 'delivered')
+      .eq('status', 'completed')
       .gte('completed_at', `${today}T00:00:00`);
     ordersCompletedToday = completedOrders?.length || 0;
   } catch {

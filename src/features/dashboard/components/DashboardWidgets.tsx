@@ -7,6 +7,7 @@ import {
   usePlatformPerformance,
   useTopRiders,
 } from '@/features/analytics/queries';
+import { useOptionalClientContext } from '@/contexts';
 
 /**
  * Real-time dashboard metrics using hooks
@@ -60,7 +61,7 @@ export function MetricCard({
             {subtitle && <p className="text-xs text-muted mt-1">{subtitle}</p>}
             {trend && trendValue && (
               <p className={`text-xs mt-1 ${trend === 'up' ? 'text-success' : trend === 'down' ? 'text-error' : 'text-muted'}`}>
-                {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'} {trendValue}
+                {trend === 'up' ? 'â†‘' : trend === 'down' ? 'â†“' : 'â†’'} {trendValue}
               </p>
             )}
           </>
@@ -75,11 +76,14 @@ export function MetricCard({
 // ============================================================================
 
 export function DashboardMetricsGrid() {
-  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
+  const clientContext = useOptionalClientContext();
+  const clientIds = clientContext?.getClientFilter() ?? null;
+
+  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics(clientIds);
   const { data: compliance, isLoading: complianceLoading } = useComplianceOverview();
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(amount);
+    new Intl.NumberFormat('en-BH', { style: 'currency', currency: 'BHD' }).format(amount);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -92,7 +96,7 @@ export function DashboardMetricsGrid() {
       />
       <MetricCard
         title="Revenue Today"
-        value={metrics ? formatCurrency(metrics.total_revenue_today) : '—'}
+        value={metrics ? formatCurrency(metrics.total_revenue_today) : 'â€”'}
         subtitle="Total earnings"
         loading={metricsLoading}
         icon={<RevenueIcon />}
@@ -133,7 +137,7 @@ export function DashboardMetricsGrid() {
       />
       <MetricCard
         title="Pending COD"
-        value={metrics ? formatCurrency(metrics.pending_cod_remittance) : '—'}
+        value={metrics ? formatCurrency(metrics.pending_cod_remittance) : 'â€”'}
         subtitle="To be remitted"
         loading={metricsLoading}
         variant={(metrics?.pending_cod_remittance ?? 0) > 10000 ? 'warning' : 'default'}
@@ -155,7 +159,10 @@ export function DashboardMetricsGrid() {
 // ============================================================================
 
 export function PlatformPerformanceWidget() {
-  const { data: platforms, isLoading, error } = usePlatformPerformance();
+  const clientContext = useOptionalClientContext();
+  const clientIds = clientContext?.getClientFilter() ?? null;
+
+  const { data: platforms, isLoading, error } = usePlatformPerformance(undefined, undefined, clientIds);
 
   if (isLoading) {
     return (
@@ -184,7 +191,7 @@ export function PlatformPerformanceWidget() {
   }
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', minimumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat('en-BH', { style: 'currency', currency: 'BHD', minimumFractionDigits: 0 }).format(amount);
 
   return (
     <Card>
@@ -254,7 +261,7 @@ export function TopRidersWidget() {
   }
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', minimumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat('en-BH', { style: 'currency', currency: 'BHD', minimumFractionDigits: 0 }).format(amount);
 
   return (
     <Card>
@@ -396,8 +403,8 @@ export function ComplianceAlertsWidget({ alerts }: { alerts: AlertItem[] }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-heading truncate">{alert.title}</p>
                 <p className="text-xs text-muted">
-                  {alert.entity_name && `${alert.entity_name} · `}
-                  Due: {new Date(alert.due_date).toLocaleDateString()}
+                  {alert.entity_name && `${alert.entity_name} Â· `}
+                  Due: {new Date(alert.due_date).toLocaleDateString('en-GB')}
                 </p>
               </div>
             </div>

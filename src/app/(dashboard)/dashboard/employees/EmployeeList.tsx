@@ -18,13 +18,16 @@ import {
   type EmployeeRole,
 } from '@/features/employees';
 import { useEmployees } from '@/features/employees/queries';
+import { useOptionalClientContext } from '@/contexts';
 
 /**
  * Employee list component using reusable DataTable.
- * Features: search, filters, sorting, pagination, row actions.
+ * Features: search, filters, sorting, pagination, row actions, bulk selection.
+ * Filters by selected client(s) from header dropdown.
  */
 export function EmployeeList() {
   const router = useRouter();
+  const clientContext = useOptionalClientContext();
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | ''>('');
   const [roleFilter, setRoleFilter] = useState<EmployeeRole | ''>('');
   const [search, setSearch] = useState('');
@@ -32,13 +35,18 @@ export function EmployeeList() {
   const [pageSize] = useState(20);
   const [sortColumn, setSortColumn] = useState<string | null>('full_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  // Get client filter from context
+  const clientIds = clientContext?.getClientFilter() ?? null;
 
   // Build filters for query
   const filters = useMemo(() => ({
     status: statusFilter || undefined,
     role: roleFilter || undefined,
     search: search || undefined,
-  }), [statusFilter, roleFilter, search]);
+    clientIds: clientIds,
+  }), [statusFilter, roleFilter, search, clientIds]);
 
   // Fetch employees using data access hook
   const { data: result, isLoading, error, refetch } = useEmployees(
@@ -135,6 +143,18 @@ export function EmployeeList() {
     }
   };
 
+  // Bulk action handlers
+  const handleBulkExport = () => {
+    // In production, this would export selected employees to CSV/Excel
+    alert(`Exporting ${selectedKeys.size} employees...`);
+  };
+
+  const handleBulkStatusChange = (status: EmployeeStatus) => {
+    // In production, this would batch-update employee status
+    alert(`Changing ${selectedKeys.size} employees to ${status}...`);
+    setSelectedKeys(new Set());
+  };
+
   return (
     <DataTable
       data={result?.data || []}
@@ -160,6 +180,22 @@ export function EmployeeList() {
       onSort={handleSort}
       onRowClick={handleRowClick}
       onRetry={refetch}
+      selectable
+      selectedKeys={selectedKeys}
+      onSelectionChange={setSelectedKeys}
+      bulkActions={
+        <>
+          <Button variant="outline" size="sm" onClick={handleBulkExport}>
+            Export
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleBulkStatusChange('active')}>
+            Set Active
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleBulkStatusChange('past')}>
+            Set Inactive
+          </Button>
+        </>
+      }
       filters={
         <FilterBar>
           <FilterSelect

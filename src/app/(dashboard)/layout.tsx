@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { RoleSwitcher } from '@/components/dev/RoleSwitcher';
+import { ClientProvider } from '@/contexts';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 /**
  * Dashboard layout wrapper.
- * Wraps all authenticated pages with sidebar and header.
+ * Wraps all authenticated pages with sidebar, header, and client context.
  */
 export default async function DashboardLayout({
   children,
@@ -32,6 +33,8 @@ export default async function DashboardLayout({
       full_name,
       is_super_admin,
       organization_id,
+      role,
+      employee_id,
       organization:organizations(name, logo_url)
     `)
     .eq('id', user.id)
@@ -43,6 +46,10 @@ export default async function DashboardLayout({
   }
 
   const userName = profile?.full_name || user.email || 'User';
+  const userRole = profile?.role || 'viewer';
+  const employeeId = profile?.employee_id || null;
+  const organizationId = profile?.organization_id || undefined;
+  
   // Supabase returns joined data as array, access first element
   const orgData = profile?.organization;
   const organization = Array.isArray(orgData) ? orgData[0] : orgData;
@@ -50,23 +57,29 @@ export default async function DashboardLayout({
   const organizationLogo = organization?.logo_url || null;
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar organizationName={organizationName} organizationLogo={organizationLogo} />
+    <ClientProvider 
+      userRole={userRole} 
+      employeeId={employeeId}
+      organizationId={organizationId}
+    >
+      <div className="flex h-screen bg-background">
+        {/* Sidebar */}
+        <Sidebar organizationName={organizationName} organizationLogo={organizationLogo} />
 
-      {/* Main content area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <Header userName={userName} organizationName={organizationName} />
+        {/* Main content area */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header */}
+          <Header userName={userName} organizationName={organizationName} />
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
-          {children}
-        </main>
+          {/* Page content */}
+          <main className="flex-1 overflow-auto p-6">
+            {children}
+          </main>
+        </div>
+
+        {/* Dev role switcher - enabled via env var or in development */}
+        {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true') && <RoleSwitcher />}
       </div>
-
-      {/* Dev role switcher - enabled via env var or in development */}
-      {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLS === 'true') && <RoleSwitcher />}
-    </div>
+    </ClientProvider>
   );
 }

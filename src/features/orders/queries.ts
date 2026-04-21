@@ -9,7 +9,8 @@ import type { Order, OrderStatus, OrderImportBatch, OrderException } from './typ
 // ============================================================================
 
 export interface OrderFilters {
-  platform_id?: string;
+  client_id?: string;
+  clientIds?: string[] | null;
   employee_id?: string;
   status?: OrderStatus;
   date?: string;
@@ -31,13 +32,17 @@ export function useOrders(filters?: OrderFilters, pagination?: PaginationParams)
         .from('orders')
         .select(`
           *,
-          platform:platforms(id, name),
+          client:clients(id, name),
           employee:employees(id, full_name, employee_number),
           asset:assets(id, name, license_plate)
         `, { count: 'exact' });
 
-      if (filters?.platform_id) {
-        query = query.eq('platform_id', filters.platform_id);
+      // Filter by client IDs (from header selector)
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        query = query.in('client_id', filters.clientIds);
+      }
+      if (filters?.client_id) {
+        query = query.eq('client_id', filters.client_id);
       }
       if (filters?.employee_id) {
         query = query.eq('employee_id', filters.employee_id);
@@ -104,7 +109,7 @@ export function useOrder(id: string | null) {
         .from('orders')
         .select(`
           *,
-          platform:platforms(id, name),
+          client:clients(id, name),
           employee:employees(id, full_name, employee_number),
           asset:assets(id, name, license_plate),
           contract:contracts(id, contract_name)

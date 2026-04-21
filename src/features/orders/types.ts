@@ -37,7 +37,7 @@ export interface Order {
   organization_id: string;
   // External reference
   external_order_id: string;
-  platform_id: string;
+  client_id: string;
   contract_id: string | null;
   // Assignment
   employee_id: string | null;

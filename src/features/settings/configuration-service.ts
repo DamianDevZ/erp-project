@@ -843,7 +843,7 @@ export async function getFinanceSettings(): Promise<{
   };
   
   return {
-    currency: getValue('currency', 'AED') as string,
+    currency: getValue('currency', 'BHD') as string,
     taxRate: getValue('tax_rate', 5) as number,
     invoiceDueDays: getValue('invoice_due_days', 30) as number,
     payrollDayOfMonth: getValue('payroll_day_of_month', 25) as number,

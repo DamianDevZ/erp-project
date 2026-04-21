@@ -121,7 +121,7 @@ export const METRIC_UNITS: Record<MetricType, string> = {
   punctuality: '%',
   incidents: 'count',
   complaints: 'count',
-  earnings: 'AED',
+  earnings: 'BHD',
   hours_worked: 'hours',
   distance_traveled: 'km',
   acceptance_rate: '%',

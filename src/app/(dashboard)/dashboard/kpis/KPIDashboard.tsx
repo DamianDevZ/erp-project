@@ -59,7 +59,7 @@ interface KPIData {
     critical: number;
   };
   operations: {
-    platformAssignments: number;
+    clientAssignments: number;
     activeAssignments: number;
     pendingLeaves: number;
     approvedLeaves: number;
@@ -632,8 +632,8 @@ export function KPIDashboard({ data }: KPIDashboardProps) {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="p-4 rounded-lg bg-background-subtle border border-border">
-              <p className="text-sm text-muted">Platform Assignments</p>
-              <p className="text-2xl font-bold text-heading">{operations.platformAssignments}</p>
+              <p className="text-sm text-muted">Client Assignments</p>
+              <p className="text-2xl font-bold text-heading">{operations.clientAssignments}</p>
               <p className="text-xs text-muted">{operations.activeAssignments} active</p>
             </div>
             <div className="p-4 rounded-lg bg-background-subtle border border-border">

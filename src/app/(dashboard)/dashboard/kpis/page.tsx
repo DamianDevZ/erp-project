@@ -39,8 +39,8 @@ export default async function KPIsPage() {
     supabase.from('coachings').select('id, type, status, created_at'),
     // Performance data
     supabase.from('performance_discipline').select('id, type, status, severity, created_at'),
-    // Platform assignments
-    supabase.from('platform_assignments').select('id, status, platform_id, employee_id'),
+    // Client assignments
+    supabase.from('client_assignments').select('id, status, client_id, employee_id'),
     // Leaves
     supabase.from('leaves').select('id, status, type'),
   ]);
@@ -52,7 +52,7 @@ export default async function KPIsPage() {
   const trainings = trainingsResult.data || [];
   const coachings = coachingsResult.data || [];
   const performance = performanceResult.data || [];
-  const platformAssignments = platformAssignmentsResult.data || [];
+  const clientAssignments = platformAssignmentsResult.data || [];
   const leaves = leavesResult.data || [];
 
   // Calculate workforce metrics
@@ -134,8 +134,8 @@ export default async function KPIsPage() {
 
   // Calculate operations metrics
   const operationsKPIs = {
-    platformAssignments: platformAssignments.length,
-    activeAssignments: platformAssignments.filter(pa => pa.status === 'active').length,
+    clientAssignments: clientAssignments.length,
+    activeAssignments: clientAssignments.filter(pa => pa.status === 'active').length,
     pendingLeaves: leaves.filter(l => l.status === 'pending').length,
     approvedLeaves: leaves.filter(l => l.status === 'approved').length,
   };

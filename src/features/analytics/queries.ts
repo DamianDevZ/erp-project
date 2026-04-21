@@ -31,8 +31,10 @@ export interface RiderPerformanceMetrics {
 }
 
 export interface PlatformPerformanceMetrics {
-  platform_id: string;
-  platform_name: string;
+  platform_id: string;  // Legacy alias for client_id
+  platform_name: string;  // Legacy alias for client_name
+  client_id: string;
+  client_name: string;
   total_orders: number;
   total_revenue: number;
   active_riders: number;
@@ -83,12 +85,73 @@ export interface TimeSeriesDataPoint {
 /**
  * Fetch main dashboard metrics
  */
-export function useDashboardMetrics() {
+export function useDashboardMetrics(clientIds?: string[] | null) {
   return useQuery<DashboardMetrics>(
     async (supabase) => {
       const today = new Date().toISOString().split('T')[0];
 
-      // Parallel queries for efficiency
+      // When filtering by clients, first resolve the employee IDs assigned to those clients.
+      // This is used to filter employees, vehicles (assigned_employee_id), and compliance alerts (employee_id).
+      let employeeIdsForFilter: string[] | null = null;
+      if (clientIds && clientIds.length > 0) {
+        const { data: assignments } = await supabase
+          .from('client_assignments')
+          .select('employee_id')
+          .in('client_id', clientIds)
+          .eq('status', 'active');
+        employeeIdsForFilter = [...new Set((assignments || []).map(a => a.employee_id))];
+      }
+
+      // If a client filter is active but no employees are assigned, return zeroes immediately
+      if (clientIds !== null && clientIds !== undefined && clientIds.length > 0 && employeeIdsForFilter?.length === 0) {
+        return {
+          data: {
+            total_employees: 0,
+            active_employees: 0,
+            total_vehicles: 0,
+            available_vehicles: 0,
+            total_orders_today: 0,
+            total_revenue_today: 0,
+            total_shifts_today: 0,
+            active_riders: 0,
+            pending_compliance_alerts: 0,
+            pending_cod_remittance: 0,
+          },
+          error: null,
+        };
+      }
+
+      // Build each query, applying the appropriate filter
+      let employeesQuery = supabase.from('employees').select('status', { count: 'exact' });
+      if (employeeIdsForFilter) {
+        employeesQuery = employeesQuery.in('id', employeeIdsForFilter);
+      }
+
+      let vehiclesQuery = supabase.from('assets').select('vehicle_status', { count: 'exact' }).neq('vehicle_status', 'disposed');
+      if (employeeIdsForFilter) {
+        vehiclesQuery = vehiclesQuery.in('assigned_employee_id', employeeIdsForFilter);
+      }
+
+      let ordersQuery = supabase.from('orders').select('total_revenue, status').gte('created_at', today);
+      if (clientIds && clientIds.length > 0) {
+        ordersQuery = ordersQuery.in('client_id', clientIds);
+      }
+
+      let shiftsQuery = supabase.from('shifts').select('id', { count: 'exact' }).eq('shift_date', today);
+      if (clientIds && clientIds.length > 0) {
+        shiftsQuery = shiftsQuery.in('client_id', clientIds);
+      }
+
+      let alertsQuery = supabase.from('compliance_alerts').select('id', { count: 'exact' }).in('status', ['open', 'acknowledged']);
+      if (employeeIdsForFilter) {
+        alertsQuery = alertsQuery.in('employee_id', employeeIdsForFilter);
+      }
+
+      let codQuery = supabase.from('cod_collections').select('amount').eq('status', 'pending');
+      if (clientIds && clientIds.length > 0) {
+        codQuery = codQuery.in('client_id', clientIds);
+      }
+
       const [
         employeesRes,
         vehiclesRes,
@@ -97,17 +160,17 @@ export function useDashboardMetrics() {
         alertsRes,
         codRes,
       ] = await Promise.all([
-        supabase.from('employees').select('status', { count: 'exact' }),
-        supabase.from('vehicles').select('status', { count: 'exact' }).neq('status', 'retired'),
-        supabase.from('orders').select('total, status').gte('created_at', today),
-        supabase.from('shifts').select('id', { count: 'exact' }).eq('date', today),
-        supabase.from('compliance_alerts').select('id', { count: 'exact' }).in('status', ['open', 'acknowledged']),
-        supabase.from('cod_collections').select('amount').eq('status', 'pending'),
+        employeesQuery,
+        vehiclesQuery,
+        ordersQuery,
+        shiftsQuery,
+        alertsQuery,
+        codQuery,
       ]);
 
       const activeEmployees = employeesRes.data?.filter(e => e.status === 'active').length || 0;
-      const availableVehicles = vehiclesRes.data?.filter(v => v.status === 'available').length || 0;
-      const totalRevenueToday = ordersRes.data?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+      const availableVehicles = vehiclesRes.data?.filter((v: { vehicle_status: string }) => v.vehicle_status === 'available').length || 0;
+      const totalRevenueToday = ordersRes.data?.reduce((sum, o) => sum + (o.total_revenue || 0), 0) || 0;
       const pendingCod = codRes.data?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
 
       return {
@@ -119,30 +182,35 @@ export function useDashboardMetrics() {
           total_orders_today: ordersRes.data?.length || 0,
           total_revenue_today: totalRevenueToday,
           total_shifts_today: shiftsRes.count || 0,
-          active_riders: activeEmployees, // Simplified
+          active_riders: activeEmployees,
           pending_compliance_alerts: alertsRes.count || 0,
           pending_cod_remittance: pendingCod,
         },
         error: null,
       };
     },
-    []
+    [JSON.stringify(clientIds)]
   );
 }
 
 /**
  * Fetch orders trend over time
  */
-export function useOrdersTrend(days: number = 30) {
+export function useOrdersTrend(days: number = 30, clientIds?: string[] | null) {
   return useQuery<TimeSeriesDataPoint[]>(
     async (supabase) => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('created_at, total')
+        .select('created_at')
         .gte('created_at', startDate.toISOString());
+      if (clientIds && clientIds.length > 0) {
+        query = query.in('client_id', clientIds);
+      }
+
+      const { data, error } = await query;
 
       if (error) return { data: null, error };
 
@@ -160,24 +228,29 @@ export function useOrdersTrend(days: number = 30) {
 
       return { data: result, error: null };
     },
-    [days]
+    [days, JSON.stringify(clientIds)]
   );
 }
 
 /**
  * Fetch revenue trend over time
  */
-export function useRevenueTrend(days: number = 30) {
+export function useRevenueTrend(days: number = 30, clientIds?: string[] | null) {
   return useQuery<TimeSeriesDataPoint[]>(
     async (supabase) => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('created_at, total')
+        .select('created_at, total_revenue')
         .gte('created_at', startDate.toISOString())
-        .eq('status', 'delivered');
+        .eq('status', 'completed');
+      if (clientIds && clientIds.length > 0) {
+        query = query.in('client_id', clientIds);
+      }
+
+      const { data, error } = await query;
 
       if (error) return { data: null, error };
 
@@ -185,7 +258,7 @@ export function useRevenueTrend(days: number = 30) {
       const byDate: Record<string, number> = {};
       data?.forEach(order => {
         const date = order.created_at.split('T')[0];
-        byDate[date] = (byDate[date] || 0) + (order.total || 0);
+        byDate[date] = (byDate[date] || 0) + (order.total_revenue || 0);
       });
 
       // Convert to array
@@ -195,7 +268,7 @@ export function useRevenueTrend(days: number = 30) {
 
       return { data: result, error: null };
     },
-    [days]
+    [days, JSON.stringify(clientIds)]
   );
 }
 
@@ -213,11 +286,11 @@ export function useTopRiders(limit: number = 10, dateFrom?: string, dateTo?: str
         .from('orders')
         .select(`
           employee_id,
-          total,
+          total_revenue,
           status,
           employees!inner(id, full_name)
         `)
-        .eq('status', 'delivered');
+        .eq('status', 'completed');
 
       if (dateFrom) {
         query = query.gte('created_at', dateFrom);
@@ -248,7 +321,7 @@ export function useTopRiders(limit: number = 10, dateFrom?: string, dateTo?: str
           };
         }
         byEmployee[empId].orders_completed++;
-        byEmployee[empId].total_earnings += (order.total as number) || 0;
+        byEmployee[empId].total_earnings += (order.total_revenue as number) || 0;
       });
 
       // Sort by orders completed and limit
@@ -272,7 +345,7 @@ export function useRiderPerformance(employeeId: string | null, dateFrom?: string
 
       let query = supabase
         .from('orders')
-        .select('total, status')
+        .select('total_revenue, status')
         .eq('employee_id', employeeId);
 
       if (dateFrom) {
@@ -294,9 +367,9 @@ export function useRiderPerformance(employeeId: string | null, dateFrom?: string
       let totalEarnings = 0;
 
       ordersRes.data?.forEach(o => {
-        if (o.status === 'delivered') {
+        if (o.status === 'completed') {
           completed++;
-          totalEarnings += o.total || 0;
+          totalEarnings += o.total_revenue || 0;
         } else if (o.status === 'cancelled' || o.status === 'rejected') {
           rejected++;
         }
@@ -321,16 +394,16 @@ export function useRiderPerformance(employeeId: string | null, dateFrom?: string
 /**
  * Fetch platform performance comparison
  */
-export function usePlatformPerformance(dateFrom?: string, dateTo?: string) {
+export function usePlatformPerformance(dateFrom?: string, dateTo?: string, clientIds?: string[] | null) {
   return useQuery<PlatformPerformanceMetrics[]>(
     async (supabase) => {
       let query = supabase
         .from('orders')
         .select(`
-          platform_id,
-          total,
+          client_id,
+          total_revenue,
           status,
-          platforms!inner(id, name)
+          client:clients!inner(id, name)
         `);
 
       if (dateFrom) {
@@ -339,15 +412,18 @@ export function usePlatformPerformance(dateFrom?: string, dateTo?: string) {
       if (dateTo) {
         query = query.lte('created_at', dateTo);
       }
+      if (clientIds && clientIds.length > 0) {
+        query = query.in('client_id', clientIds);
+      }
 
       const { data, error } = await query;
 
       if (error) return { data: null, error };
 
-      // Aggregate by platform
-      const byPlatform: Record<string, {
-        platform_id: string;
-        platform_name: string;
+      // Aggregate by client
+      const byClient: Record<string, {
+        client_id: string;
+        client_name: string;
         total_orders: number;
         delivered: number;
         rejected: number;
@@ -356,13 +432,13 @@ export function usePlatformPerformance(dateFrom?: string, dateTo?: string) {
       }> = {};
 
       data?.forEach((order: Record<string, unknown>) => {
-        const platId = order.platform_id as string;
-        const plat = order.platforms as { id: string; name: string };
+        const clientId = order.client_id as string;
+        const client = order.client as { id: string; name: string };
         
-        if (!byPlatform[platId]) {
-          byPlatform[platId] = {
-            platform_id: platId,
-            platform_name: plat?.name || 'Unknown',
+        if (!byClient[clientId]) {
+          byClient[clientId] = {
+            client_id: clientId,
+            client_name: client?.name || 'Unknown',
             total_orders: 0,
             delivered: 0,
             rejected: 0,
@@ -371,28 +447,30 @@ export function usePlatformPerformance(dateFrom?: string, dateTo?: string) {
           };
         }
         
-        byPlatform[platId].total_orders++;
-        if (order.status === 'delivered') {
-          byPlatform[platId].delivered++;
-          byPlatform[platId].total_revenue += (order.total as number) || 0;
+        byClient[clientId].total_orders++;
+        if (order.status === 'completed') {
+          byClient[clientId].delivered++;
+          byClient[clientId].total_revenue += (order.total_revenue as number) || 0;
         } else if (order.status === 'rejected' || order.status === 'cancelled') {
-          byPlatform[platId].rejected++;
+          byClient[clientId].rejected++;
         }
       });
 
-      const result: PlatformPerformanceMetrics[] = Object.values(byPlatform).map(p => ({
-        platform_id: p.platform_id,
-        platform_name: p.platform_name,
-        total_orders: p.total_orders,
-        total_revenue: p.total_revenue,
-        active_riders: p.riders.size,
-        average_order_value: p.delivered > 0 ? p.total_revenue / p.delivered : 0,
-        rejection_rate: p.total_orders > 0 ? (p.rejected / p.total_orders) * 100 : 0,
+      const result: PlatformPerformanceMetrics[] = Object.values(byClient).map(c => ({
+        platform_id: c.client_id,  // Legacy alias
+        platform_name: c.client_name,  // Legacy alias
+        client_id: c.client_id,
+        client_name: c.client_name,
+        total_orders: c.total_orders,
+        total_revenue: c.total_revenue,
+        active_riders: c.riders.size,
+        average_order_value: c.delivered > 0 ? c.total_revenue / c.delivered : 0,
+        rejection_rate: c.total_orders > 0 ? (c.rejected / c.total_orders) * 100 : 0,
       }));
 
       return { data: result, error: null };
     },
-    [dateFrom, dateTo]
+    [dateFrom, dateTo, JSON.stringify(clientIds)]
   );
 }
 
@@ -408,7 +486,7 @@ export function useFinancialSummary(dateFrom?: string, dateTo?: string) {
     async (supabase) => {
       const [ordersRes, payrollRes, invoicesRes, codRes] = await Promise.all([
         (async () => {
-          let q = supabase.from('orders').select('total').eq('status', 'delivered');
+          let q = supabase.from('orders').select('total_revenue').eq('status', 'completed');
           if (dateFrom) q = q.gte('created_at', dateFrom);
           if (dateTo) q = q.lte('created_at', dateTo);
           return q;
@@ -521,12 +599,12 @@ export function useComplianceOverview() {
         supabase
           .from('employee_documents')
           .select('id')
-          .gt('expiry_date', today)
-          .lte('expiry_date', thirtyDaysStr),
+          .gt('expires_at', today)
+          .lte('expires_at', thirtyDaysStr),
         supabase
           .from('employee_documents')
           .select('id')
-          .lte('expiry_date', today),
+          .lte('expires_at', today),
       ]);
 
       const totalAlerts = alertsRes.data?.length || 0;
@@ -602,15 +680,15 @@ export function useFleetOverview() {
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
       const [vehiclesRes, maintenanceRes, fuelRes, violationsRes] = await Promise.all([
-        supabase.from('vehicles').select('status').neq('status', 'retired'),
+        supabase.from('assets').select('vehicle_status').neq('vehicle_status', 'disposed'),
         supabase
-          .from('maintenance_records')
+          .from('maintenance_events')
           .select('id')
           .in('status', ['scheduled', 'in_progress']),
         supabase
-          .from('fuel_records')
-          .select('total_cost')
-          .gte('filled_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+          .from('fuel_transactions')
+          .select('total_amount')
+          .gte('transaction_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
         supabase
           .from('traffic_violations')
           .select('fine_amount')
@@ -618,9 +696,9 @@ export function useFleetOverview() {
       ]);
 
       const total = vehiclesRes.data?.length || 0;
-      const active = vehiclesRes.data?.filter(v => v.status === 'assigned' || v.status === 'available').length || 0;
-      const inMaintenance = vehiclesRes.data?.filter(v => v.status === 'maintenance').length || 0;
-      const totalFuelCost = fuelRes.data?.reduce((sum, f) => sum + (f.total_cost || 0), 0) || 0;
+      const active = vehiclesRes.data?.filter((v: { vehicle_status: string }) => v.vehicle_status === 'assigned' || v.vehicle_status === 'available').length || 0;
+      const inMaintenance = vehiclesRes.data?.filter((v: { vehicle_status: string }) => v.vehicle_status === 'maintenance').length || 0;
+      const totalFuelCost = fuelRes.data?.reduce((sum, f: { total_amount?: number }) => sum + (f.total_amount || 0), 0) || 0;
       const pendingFines = violationsRes.data?.reduce((sum, v) => sum + (v.fine_amount || 0), 0) || 0;
 
       return {
@@ -650,17 +728,17 @@ export function useFuelCostTrend(days: number = 30) {
       startDate.setDate(startDate.getDate() - days);
 
       const { data, error } = await supabase
-        .from('fuel_records')
-        .select('filled_at, total_cost')
-        .gte('filled_at', startDate.toISOString());
+        .from('fuel_transactions')
+        .select('transaction_date, total_amount')
+        .gte('transaction_date', startDate.toISOString().split('T')[0]);
 
       if (error) return { data: null, error };
 
       // Group by date
       const byDate: Record<string, number> = {};
-      data?.forEach(record => {
-        const date = record.filled_at.split('T')[0];
-        byDate[date] = (byDate[date] || 0) + (record.total_cost || 0);
+      data?.forEach((record: { transaction_date: string; total_amount?: number }) => {
+        const date = record.transaction_date;
+        byDate[date] = (byDate[date] || 0) + (record.total_amount || 0);
       });
 
       const result: TimeSeriesDataPoint[] = Object.entries(byDate)
@@ -828,8 +906,8 @@ export function useReportData(params: ReportParams) {
         // Financial - orders
         supabase
           .from('orders')
-          .select('total')
-          .eq('status', 'delivered')
+          .select('total_revenue')
+          .eq('status', 'completed')
           .gte('created_at', date_from)
           .lte('created_at', date_to),
         // Compliance alerts
@@ -838,24 +916,24 @@ export function useReportData(params: ReportParams) {
           .select('severity, status')
           .in('status', ['open', 'acknowledged']),
         // Fleet
-        supabase.from('vehicles').select('status').neq('status', 'retired'),
+        supabase.from('assets').select('vehicle_status').neq('vehicle_status', 'disposed'),
         // Top riders
         supabase
           .from('orders')
-          .select('employee_id, total, employees!inner(full_name)')
-          .eq('status', 'delivered')
+          .select('employee_id, total_revenue, employees!inner(full_name)')
+          .eq('status', 'completed')
           .gte('created_at', date_from)
           .lte('created_at', date_to),
-        // Platform performance
+        // Client/Platform performance
         supabase
           .from('orders')
-          .select('platform_id, total, status, platforms!inner(name)')
+          .select('client_id, total_revenue, status, client:clients!inner(name)')
           .gte('created_at', date_from)
           .lte('created_at', date_to),
       ]);
 
       // Process financial
-      const totalRevenue = financialRes.data?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+      const totalRevenue = financialRes.data?.reduce((sum, o) => sum + (o.total_revenue || 0), 0) || 0;
 
       // Process riders
       const ridersMap: Record<string, { name: string; orders: number; earnings: number }> = {};
@@ -866,7 +944,7 @@ export function useReportData(params: ReportParams) {
           ridersMap[empId] = { name: emp?.full_name || 'Unknown', orders: 0, earnings: 0 };
         }
         ridersMap[empId].orders++;
-        ridersMap[empId].earnings += (o.total as number) || 0;
+        ridersMap[empId].earnings += (o.total_revenue as number) || 0;
       });
 
       const topRiders: RiderPerformanceMetrics[] = Object.entries(ridersMap)
@@ -881,26 +959,28 @@ export function useReportData(params: ReportParams) {
         .sort((a, b) => b.orders_completed - a.orders_completed)
         .slice(0, 10);
 
-      // Process platforms
-      const platformsMap: Record<string, { name: string; orders: number; revenue: number; rejected: number }> = {};
+      // Process clients
+      const clientsMap: Record<string, { name: string; orders: number; revenue: number; rejected: number }> = {};
       platformsRes.data?.forEach((o: Record<string, unknown>) => {
-        const platId = o.platform_id as string;
-        const plat = o.platforms as { name: string };
-        if (!platformsMap[platId]) {
-          platformsMap[platId] = { name: plat?.name || 'Unknown', orders: 0, revenue: 0, rejected: 0 };
+        const clientId = o.client_id as string;
+        const client = o.client as { name: string };
+        if (!clientsMap[clientId]) {
+          clientsMap[clientId] = { name: client?.name || 'Unknown', orders: 0, revenue: 0, rejected: 0 };
         }
-        platformsMap[platId].orders++;
-        if (o.status === 'delivered') {
-          platformsMap[platId].revenue += (o.total as number) || 0;
+        clientsMap[clientId].orders++;
+        if (o.status === 'completed') {
+          clientsMap[clientId].revenue += (o.total_revenue as number) || 0;
         } else if (o.status === 'rejected' || o.status === 'cancelled') {
-          platformsMap[platId].rejected++;
+          clientsMap[clientId].rejected++;
         }
       });
 
-      const platformPerformance: PlatformPerformanceMetrics[] = Object.entries(platformsMap)
+      const platformPerformance: PlatformPerformanceMetrics[] = Object.entries(clientsMap)
         .map(([id, data]) => ({
-          platform_id: id,
-          platform_name: data.name,
+          platform_id: id,  // Legacy alias
+          platform_name: data.name,  // Legacy alias
+          client_id: id,
+          client_name: data.name,
           total_orders: data.orders,
           total_revenue: data.revenue,
           active_riders: 0,
@@ -916,7 +996,7 @@ export function useReportData(params: ReportParams) {
             total_employees: dashboardRes.count || 0,
             active_employees: dashboardRes.data?.filter(e => e.status === 'active').length || 0,
             total_vehicles: fleetRes.data?.length || 0,
-            available_vehicles: fleetRes.data?.filter(v => v.status === 'available').length || 0,
+            available_vehicles: fleetRes.data?.filter((v: { vehicle_status: string }) => v.vehicle_status === 'available').length || 0,
             total_orders_today: 0,
             total_revenue_today: 0,
             total_shifts_today: 0,
@@ -944,8 +1024,8 @@ export function useReportData(params: ReportParams) {
           },
           fleet: {
             total_vehicles: fleetRes.data?.length || 0,
-            active_vehicles: fleetRes.data?.filter(v => v.status !== 'maintenance').length || 0,
-            in_maintenance: fleetRes.data?.filter(v => v.status === 'maintenance').length || 0,
+            active_vehicles: fleetRes.data?.filter((v: { vehicle_status: string }) => v.vehicle_status !== 'maintenance').length || 0,
+            in_maintenance: fleetRes.data?.filter((v: { vehicle_status: string }) => v.vehicle_status === 'maintenance').length || 0,
             upcoming_maintenance: 0,
             total_fuel_cost: 0,
             pending_violations: 0,

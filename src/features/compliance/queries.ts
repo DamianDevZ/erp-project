@@ -29,10 +29,12 @@ export function useComplianceAlerts(filters?: ComplianceFilters) {
         `);
 
       if (filters?.status) {
-        query = query.eq('compliance_status', filters.status);
+        query = query.eq('status', filters.status);
       }
-      if (filters?.entity_type) {
-        query = query.eq('entity_type', filters.entity_type);
+      if (filters?.entity_type === 'employee') {
+        query = query.not('employee_id', 'is', null);
+      } else if (filters?.entity_type === 'asset') {
+        query = query.not('asset_id', 'is', null);
       }
       if (filters?.alert_type) {
         query = query.eq('alert_type', filters.alert_type);
@@ -41,7 +43,7 @@ export function useComplianceAlerts(filters?: ComplianceFilters) {
         query = query.eq('is_resolved', filters.is_resolved);
       }
 
-      query = query.order('expiry_date', { ascending: true });
+      query = query.order('expires_at', { ascending: true });
 
       const { data, error } = await query;
       return { data, error };
@@ -54,7 +56,7 @@ export function useComplianceAlerts(filters?: ComplianceFilters) {
  * Fetch active (unresolved) compliance alerts
  */
 export function useActiveComplianceAlerts() {
-  return useComplianceAlerts({ is_resolved: false });
+  return useComplianceAlerts({ status: 'open' as any });
 }
 
 /**
@@ -73,10 +75,10 @@ export function useExpiringSoonAlerts() {
           employee:employees(id, full_name),
           asset:assets(id, name, license_plate)
         `)
-        .eq('is_resolved', false)
-        .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
-        .gte('expiry_date', today.toISOString().split('T')[0])
-        .order('expiry_date');
+        .in('status', ['open', 'acknowledged'])
+        .lte('expires_at', thirtyDaysFromNow.toISOString().split('T')[0])
+        .gte('expires_at', today.toISOString().split('T')[0])
+        .order('expires_at');
 
       return { data, error };
     },
@@ -96,7 +98,7 @@ export function useEmployeeComplianceAlerts(employeeId: string | null) {
         .from('compliance_alerts')
         .select('*')
         .eq('employee_id', employeeId)
-        .order('expiry_date');
+        .order('expires_at');
 
       return { data, error };
     },
@@ -116,7 +118,7 @@ export function useAssetComplianceAlerts(assetId: string | null) {
         .from('compliance_alerts')
         .select('*')
         .eq('asset_id', assetId)
-        .order('expiry_date');
+        .order('expires_at');
 
       return { data, error };
     },
@@ -140,8 +142,8 @@ export function useComplianceSummary() {
 
       const { data, error } = await supabase
         .from('compliance_alerts')
-        .select('compliance_status, expiry_date')
-        .eq('is_resolved', false);
+        .select('status, severity, expires_at')
+        .in('status', ['open', 'acknowledged']);
 
       if (error) return { data: null, error };
 
@@ -153,7 +155,7 @@ export function useComplianceSummary() {
       };
 
       data?.forEach(alert => {
-        const expiryDate = new Date(alert.expiry_date);
+        const expiryDate = new Date(alert.expires_at);
         if (expiryDate < today) {
           summary.non_compliant++;
         } else if (expiryDate <= thirtyDaysFromNow) {
@@ -162,7 +164,7 @@ export function useComplianceSummary() {
           summary.compliant++;
         }
 
-        if (alert.compliance_status === 'blocked') {
+        if (alert.severity === 'blocking') {
           summary.blocked++;
         }
       });
@@ -186,7 +188,7 @@ export function useResolveComplianceAlert() {
       const { data, error } = await supabase
         .from('compliance_alerts')
         .update({
-          is_resolved: true,
+          status: 'resolved',
           resolved_at: new Date().toISOString(),
           resolution_notes,
         })

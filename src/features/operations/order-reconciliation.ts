@@ -619,7 +619,7 @@ export async function getReconciliationSummary(): Promise<ReconciliationSummary>
     .eq('status', 'discrepancy');
   
   const { data: platforms } = await supabase
-    .from('platforms')
+    .from('clients')
     .select('id, name');
   
   // Calculate variance by platform

@@ -9,7 +9,8 @@ import type { Shift, ShiftAssignment, ShiftStatus } from './types';
 // ============================================================================
 
 export interface ShiftFilters {
-  platform_id?: string;
+  client_id?: string;
+  clientIds?: string[] | null;
   status?: ShiftStatus;
   date?: string;
   date_from?: string;
@@ -26,12 +27,16 @@ export function useShifts(filters?: ShiftFilters, pagination?: PaginationParams)
         .from('shifts')
         .select(`
           *,
-          platform:platforms(id, name),
+          client:clients(id, name),
           created_by_user:user_profiles(id, full_name)
         `, { count: 'exact' });
 
-      if (filters?.platform_id) {
-        query = query.eq('platform_id', filters.platform_id);
+      // Filter by client IDs (from header selector)
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        query = query.in('client_id', filters.clientIds);
+      }
+      if (filters?.client_id) {
+        query = query.eq('client_id', filters.client_id);
       }
       if (filters?.status) {
         query = query.eq('status', filters.status);
@@ -91,7 +96,7 @@ export function useShift(id: string | null) {
         .from('shifts')
         .select(`
           *,
-          platform:platforms(id, name),
+          client:clients(id, name),
           assignments:shift_assignments(
             id,
             employee:employees(id, full_name, employee_number),

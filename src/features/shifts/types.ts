@@ -6,7 +6,6 @@ export interface Shift {
   id: string;
   organization_id: string;
   employee_id: string;
-  platform_id: string | null;
   client_id: string | null;
   vehicle_id: string | null;
   zone_id: string | null;
@@ -33,10 +32,6 @@ export interface Shift {
     full_name: string;
     employee_id: string;
     compliance_status?: string;
-  };
-  platform?: {
-    id: string;
-    name: string;
   };
   client?: {
     id: string;

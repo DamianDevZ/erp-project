@@ -235,7 +235,7 @@ export async function getOperationsDashboard(): Promise<{
       previousValue: revenueLastMonth,
       change: revenueLastMonth ? Math.round((revenueThisMonth - revenueLastMonth) / revenueLastMonth * 100) : null,
       changeType: revenueThisMonth >= revenueLastMonth ? 'increase' : 'decrease',
-      unit: 'AED',
+      unit: 'BHD',
       format: 'currency',
     },
   ];
@@ -324,7 +324,7 @@ export async function getFinancialDashboard(): Promise<{
       previousValue: null,
       change: null,
       changeType: 'neutral',
-      unit: 'AED',
+      unit: 'BHD',
       format: 'currency',
     },
     {
@@ -334,7 +334,7 @@ export async function getFinancialDashboard(): Promise<{
       previousValue: null,
       change: null,
       changeType: 'neutral',
-      unit: 'AED',
+      unit: 'BHD',
       format: 'currency',
     },
     {
@@ -344,7 +344,7 @@ export async function getFinancialDashboard(): Promise<{
       previousValue: null,
       change: null,
       changeType: outstandingInvoices > 50000 ? 'decrease' : 'neutral',
-      unit: 'AED',
+      unit: 'BHD',
       format: 'currency',
     },
     {
@@ -354,7 +354,7 @@ export async function getFinancialDashboard(): Promise<{
       previousValue: null,
       change: null,
       changeType: 'neutral',
-      unit: 'AED',
+      unit: 'BHD',
       format: 'currency',
     },
   ];

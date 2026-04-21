@@ -54,6 +54,19 @@ export {
   useFormState,
 } from './form';
 
+// Dialog - Modal dialogs
+export {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter,
+  DialogClose,
+} from './dialog';
+
 // Page Layout - Standardized page structure patterns
 export {
   PageHeader,

@@ -26,7 +26,7 @@ interface EmployeeOption {
   employee_id: string;
 }
 
-interface PlatformOption {
+interface ClientOption {
   id: string;
   name: string;
 }
@@ -40,12 +40,12 @@ export function ShiftForm({ shift, isEditing = false }: ShiftFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
-  const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Form state
   const [employeeId, setEmployeeId] = useState(shift?.employee_id || '');
-  const [platformId, setPlatformId] = useState(shift?.platform_id || '');
+  const [clientId, setClientId] = useState(shift?.client_id || '');
   const [shiftDate, setShiftDate] = useState(shift?.shift_date || new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState(shift?.start_time || '09:00');
   const [endTime, setEndTime] = useState(shift?.end_time || '17:00');
@@ -65,24 +65,25 @@ export function ShiftForm({ shift, isEditing = false }: ShiftFormProps) {
       setLoadingData(true);
       const supabase = createClient();
       
-      const [employeesRes, platformsRes] = await Promise.all([
+      const [employeesRes, clientsRes] = await Promise.all([
         supabase
           .from('employees')
           .select('id, full_name, employee_id')
           .eq('status', 'active')
           .order('full_name'),
         supabase
-          .from('platforms')
+          .from('clients')
           .select('id, name')
-          .eq('status', 'active')
+          .eq('is_active', true)
+          .is('deleted_at', null)
           .order('name'),
       ]);
 
       if (employeesRes.error) throw employeesRes.error;
-      if (platformsRes.error) throw platformsRes.error;
+      if (clientsRes.error) throw clientsRes.error;
       
       setEmployees(employeesRes.data || []);
-      setPlatforms(platformsRes.data || []);
+      setClients(clientsRes.data || []);
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
@@ -105,7 +106,7 @@ export function ShiftForm({ shift, isEditing = false }: ShiftFormProps) {
 
       const data = {
         employee_id: employeeId,
-        platform_id: platformId || null,
+        client_id: clientId || null,
         shift_date: shiftDate,
         start_time: startTime,
         end_time: endTime,
@@ -184,9 +185,9 @@ export function ShiftForm({ shift, isEditing = false }: ShiftFormProps) {
               )}
             </div>
 
-            {/* Platform/Client */}
+            {/* Client */}
             <div className="space-y-2">
-              <Label htmlFor="platform">Client</Label>
+              <Label htmlFor="client">Client</Label>
               {loadingData ? (
                 <div className="flex items-center gap-2 py-2">
                   <Spinner size="sm" />
@@ -194,15 +195,15 @@ export function ShiftForm({ shift, isEditing = false }: ShiftFormProps) {
                 </div>
               ) : (
                 <select
-                  id="platform"
-                  value={platformId}
-                  onChange={(e) => setPlatformId(e.target.value)}
+                  id="client"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">No specific client</option>
-                  {platforms.map((platform) => (
-                    <option key={platform.id} value={platform.id}>
-                      {platform.name}
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
                     </option>
                   ))}
                 </select>
