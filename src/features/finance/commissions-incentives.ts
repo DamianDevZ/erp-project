@@ -195,7 +195,7 @@ export async function getCommissionRules(platformId?: string): Promise<Commissio
     .from('commission_rules')
     .select(`
       *,
-      platform:platforms(name)
+      client:clients(name)
     `)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
@@ -357,7 +357,7 @@ export async function getRiderCommissions(
     .select(`
       *,
       rider:employees!order_commissions_rider_id_fkey(full_name),
-      platform:platforms(name)
+      client:clients(name)
     `)
     .eq('rider_id', riderId)
     .order('created_at', { ascending: false });
@@ -713,7 +713,7 @@ export async function calculateRiderBonuses(
   // Get commissions
   const { data: commissions } = await supabase
     .from('order_commissions')
-    .select('commission_amount, platform:platforms(name)')
+    .select('commission_amount, client:clients(name)')
     .eq('rider_id', riderId)
     .gte('created_at', startDate)
     .lte('created_at', endDate);
@@ -845,7 +845,7 @@ export async function getCommissionSummary(): Promise<CommissionSummary> {
       rider_id,
       platform_id,
       rider:employees!order_commissions_rider_id_fkey(full_name),
-      platform:platforms(name)
+      client:clients(name)
     `);
   
   let totalPaid = 0;

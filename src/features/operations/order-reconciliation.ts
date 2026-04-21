@@ -504,7 +504,7 @@ export async function getReconciliationBatches(filters?: {
     .from('reconciliation_batches')
     .select(`
       *,
-      platform:platforms(name)
+      client:clients(name)
     `)
     .order('period_start', { ascending: false });
   

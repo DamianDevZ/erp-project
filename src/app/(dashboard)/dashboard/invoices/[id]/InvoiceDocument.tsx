@@ -114,16 +114,16 @@ export function InvoiceDocument({ invoice, organization }: InvoiceDocumentProps)
         <div className="grid grid-cols-2 gap-8 py-8 border-b border-gray-200">
           <div>
             <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Bill To</p>
-            <p className="text-lg font-semibold text-gray-900">{invoice.platform?.name || 'Platform'}</p>
-            {invoice.platform?.vat_id && (
-              <p className="text-sm text-gray-600 mt-1">VAT ID: {invoice.platform.vat_id}</p>
+            <p className="text-lg font-semibold text-gray-900">{((invoice.client ?? invoice.platform) as any)?.name || 'Client'}</p>
+            {((invoice.client ?? invoice.platform) as any)?.vat_id && (
+              <p className="text-sm text-gray-600 mt-1">VAT ID: {((invoice.client ?? invoice.platform) as any).vat_id}</p>
             )}
-            {invoice.platform?.address && (
-              <p className="text-sm text-gray-600 mt-1">{invoice.platform.address}</p>
+            {((invoice.client ?? invoice.platform) as any)?.address && (
+              <p className="text-sm text-gray-600 mt-1">{((invoice.client ?? invoice.platform) as any).address}</p>
             )}
-            {(invoice.platform?.city || invoice.platform?.country) && (
+            {(((invoice.client ?? invoice.platform) as any)?.city || ((invoice.client ?? invoice.platform) as any)?.country) && (
               <p className="text-sm text-gray-600">
-                {[invoice.platform.city, invoice.platform.country].filter(Boolean).join(', ')}
+                {[((invoice.client ?? invoice.platform) as any).city, ((invoice.client ?? invoice.platform) as any).country].filter(Boolean).join(', ')}
               </p>
             )}
           </div>

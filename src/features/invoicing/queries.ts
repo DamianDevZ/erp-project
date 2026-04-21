@@ -119,7 +119,7 @@ export function useOverdueInvoices() {
         .from('invoices')
         .select(`
           *,
-          platform:platforms(id, name)
+          client:clients(id, name)
         `)
         .lt('due_at', today)
         .in('status', ['sent', 'draft'])

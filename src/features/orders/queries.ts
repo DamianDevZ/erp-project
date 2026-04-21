@@ -203,7 +203,7 @@ export function useUnreconciledOrders(platformId?: string) {
         .from('orders')
         .select(`
           *,
-          platform:platforms(id, name),
+          client:clients(id, name),
           employee:employees(id, full_name)
         `)
         .in('reconciliation_status', ['pending', 'mismatched']);
@@ -238,7 +238,7 @@ export function useOrderImportBatches(pagination?: PaginationParams) {
         .from('order_import_batches')
         .select(`
           *,
-          platform:platforms(id, name),
+          client:clients(id, name),
           imported_by_user:user_profiles(id, full_name)
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
@@ -278,7 +278,7 @@ export function useOrderExceptions(filters?: { status?: string; exception_type?:
         .from('order_exceptions')
         .select(`
           *,
-          order:orders(id, external_order_id, platform:platforms(name)),
+          order:orders(id, external_order_id, client:clients(name)),
           assigned_to_user:user_profiles(id, full_name)
         `);
 

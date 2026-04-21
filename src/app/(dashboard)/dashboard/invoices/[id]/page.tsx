@@ -28,7 +28,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
   // Fetch invoice with platform
   const { data: invoice, error } = await supabase
     .from('invoices')
-    .select('*, platform:platforms(name, vat_id, address, city, country)')
+    .select('*, client:clients(name, vat_id, address, city, country)')
     .eq('id', id)
     .single();
 

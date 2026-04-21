@@ -90,7 +90,7 @@ export function useCodCollections(filters?: CodFilters, pagination?: PaginationP
         .select(`
           *,
           employee:employees(id, full_name),
-          platform:platforms(id, name)
+          client:clients(id, name)
         `, { count: 'exact' });
 
       if (filters?.employee_id) {
@@ -145,7 +145,7 @@ export function usePendingCodRemittances() {
         .select(`
           *,
           employee:employees(id, full_name),
-          platform:platforms(id, name)
+          client:clients(id, name)
         `)
         .eq('status', 'pending')
         .order('collected_at');

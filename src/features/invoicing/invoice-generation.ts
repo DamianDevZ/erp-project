@@ -462,7 +462,7 @@ export async function getInvoice(invoiceId: string): Promise<Invoice | null> {
     .select(`
       *,
       client:clients(name, email, address),
-      platform:platforms(name),
+      client:clients(name),
       payments:invoice_payments(*)
     `)
     .eq('id', invoiceId)
@@ -489,7 +489,7 @@ export async function getInvoices(filters?: {
     .select(`
       *,
       client:clients(name, email, address),
-      platform:platforms(name),
+      client:clients(name),
       payments:invoice_payments(*)
     `)
     .order('issue_date', { ascending: false });

@@ -148,7 +148,7 @@ export function useEmployeeShifts(employeeId: string | null, dateFrom?: string, 
         .from('shift_assignments')
         .select(`
           *,
-          shift:shifts(id, shift_date, start_time, end_time, platform:platforms(name))
+          shift:shifts(id, shift_date, start_time, end_time, client:clients(name))
         `)
         .eq('employee_id', employeeId);
 

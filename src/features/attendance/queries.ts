@@ -29,7 +29,7 @@ export function useAttendance(filters?: AttendanceFilters, pagination?: Paginati
         .select(`
           *,
           employee:employees(id, full_name, employee_number),
-          platform:platforms(id, name),
+          client:clients(id, name),
           shift:shifts(id, shift_date, start_time, end_time)
         `, { count: 'exact' });
 
@@ -107,7 +107,7 @@ export function useEmployeeAttendance(employeeId: string | null, dateFrom?: stri
         .from('attendance')
         .select(`
           *,
-          platform:platforms(id, name)
+          client:clients(id, name)
         `)
         .eq('employee_id', employeeId);
 

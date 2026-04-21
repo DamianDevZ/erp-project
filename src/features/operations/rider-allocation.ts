@@ -162,7 +162,7 @@ export async function getRiderAllocations(riderId: string): Promise<PlatformAllo
     .select(`
       *,
       rider:employees(full_name),
-      platform:platforms(name)
+      client:clients(name)
     `)
     .eq('rider_id', riderId)
     .order('primary_platform', { ascending: false });
@@ -547,7 +547,7 @@ export async function getShiftAssignments(
       *,
       rider:employees(full_name),
       vehicle:assets(license_plate),
-      platform:platforms(name)
+      client:clients(name)
     `)
     .gte('shift_date', startDate)
     .lte('shift_date', endDate)

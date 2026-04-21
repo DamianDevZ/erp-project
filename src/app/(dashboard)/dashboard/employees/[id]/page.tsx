@@ -33,7 +33,7 @@ export default async function EmployeeDetailPage({ params }: Props) {
       .limit(20),
     supabase
       .from('platform_assignments')
-      .select('*, platform:platforms(id, name)')
+      .select('*, client:clients(id, name)')
       .eq('employee_id', id)
       .order('start_date', { ascending: false }),
     supabase
@@ -146,7 +146,7 @@ export default async function EmployeeDetailPage({ params }: Props) {
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {activeAssignments.map((assignment) => (
                     <Badge key={assignment.id} variant="default">
-                      {assignment.platform?.name || 'Unknown'}
+                      {(assignment.client as { name: string } | null)?.name || 'Unknown'}
                     </Badge>
                   ))}
                 </div>

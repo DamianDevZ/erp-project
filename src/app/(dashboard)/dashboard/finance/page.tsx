@@ -12,7 +12,7 @@ export default async function FinancePage() {
     // Get orders with COD in last 30 days
     supabase
       .from('orders')
-      .select('id, external_order_id, total_revenue, cod_amount, status, created_at, employee:employees(full_name), platform:platforms(name)')
+      .select('id, external_order_id, total_revenue, cod_amount, status, created_at, employee:employees(full_name), client:clients(name)')
       .gt('cod_amount', 0)
       .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
@@ -26,7 +26,7 @@ export default async function FinancePage() {
     // Get recent invoices
     supabase
       .from('invoices')
-      .select('id, invoice_number, title, total, status, due_at, platform:platforms(name)')
+      .select('id, invoice_number, title, total, status, due_at, client:clients(name)')
       .order('created_at', { ascending: false })
       .limit(10),
   ]);
@@ -124,7 +124,7 @@ export default async function FinancePage() {
                         {order.external_order_id || order.id}
                       </Link>
                       <p className="text-sm text-muted">
-                        {order.employee?.full_name} â€¢ {order.platform?.name}
+                        {(order.employee as { full_name: string } | null)?.full_name} • {(order.client as { name: string } | null)?.name}
                       </p>
                     </div>
                     <div className="text-right">
@@ -165,7 +165,7 @@ export default async function FinancePage() {
                         {invoice.invoice_number}
                       </Link>
                       <p className="text-sm text-muted">
-                        {invoice.platform?.name || invoice.title}
+                        {(invoice.client as { name: string } | null)?.name || invoice.title}
                       </p>
                     </div>
                     <div className="text-right">

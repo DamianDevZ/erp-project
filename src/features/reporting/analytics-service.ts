@@ -568,7 +568,7 @@ async function generateOrdersByPlatformReport(
     .from('orders')
     .select(`
       platform_id,
-      platform:platforms(name),
+      client:clients(name),
       status,
       order_value
     `)
