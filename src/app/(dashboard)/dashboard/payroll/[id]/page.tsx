@@ -48,7 +48,7 @@ export default async function PayrollDetailPage({ params }: Props) {
         title={`Payroll #${payroll.payroll_number}`}
         description={
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant={(statusVariants[payroll.status] as any) || 'secondary'}>
+            <Badge variant={(statusVariants[payroll.status] as any) || 'outline'}>
               {payroll.status}
             </Badge>
           </div>
@@ -70,7 +70,7 @@ export default async function PayrollDetailPage({ params }: Props) {
           <DetailGrid>
             <DetailItem label="Payroll #" value={payroll.payroll_number} />
             <DetailItem label="Status" value={
-              <Badge variant={(statusVariants[payroll.status] as any) || 'secondary'}>
+              <Badge variant={(statusVariants[payroll.status] as any) || 'outline'}>
                 {payroll.status}
               </Badge>
             } />
@@ -127,7 +127,7 @@ export default async function PayrollDetailPage({ params }: Props) {
             <DetailItem label="Payment Method" value={payroll.payment_method || '—'} />
             <DetailItem label="Payment Reference" value={payroll.payment_reference || '—'} />
             <DetailItem label="WPS Included" value={
-              <Badge variant={payroll.wps_included ? 'success' : 'secondary'}>
+              <Badge variant={payroll.wps_included ? 'success' : 'outline'}>
                 {payroll.wps_included ? 'Yes' : 'No'}
               </Badge>
             } />

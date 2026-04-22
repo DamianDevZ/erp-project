@@ -17,11 +17,11 @@ function StatusBadge({ status }: { status: string }) {
     pending: 'warning',
     completed: 'success',
     cancelled: 'destructive',
-    returned: 'secondary',
+    returned: 'outline',
     disputed: 'destructive',
   };
   return (
-    <Badge variant={(variants[status] as any) || 'secondary'}>
+    <Badge variant={(variants[status] as any) || 'outline'}>
       {ORDER_STATUS_LABELS[status as keyof typeof ORDER_STATUS_LABELS] || status}
     </Badge>
   );
@@ -29,13 +29,13 @@ function StatusBadge({ status }: { status: string }) {
 
 function ReconciliationBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
-    pending: 'secondary',
+    pending: 'outline',
     matched: 'success',
     mismatched: 'destructive',
     resolved: 'success',
   };
   return (
-    <Badge variant={(variants[status] as any) || 'secondary'}>
+    <Badge variant={(variants[status] as any) || 'outline'}>
       {RECONCILIATION_STATUS_LABELS[status as keyof typeof RECONCILIATION_STATUS_LABELS] || status}
     </Badge>
   );
@@ -166,7 +166,7 @@ export default async function OrderDetailPage({ params }: Props) {
               </Badge>
             } />
             <DetailItem label="Invoice Processed" value={
-              <Badge variant={order.invoice_processed ? 'success' : 'secondary'}>
+              <Badge variant={order.invoice_processed ? 'success' : 'outline'}>
                 {order.invoice_processed ? 'Yes' : 'No'}
               </Badge>
             } />
