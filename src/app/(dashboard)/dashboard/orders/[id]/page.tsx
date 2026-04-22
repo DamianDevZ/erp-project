@@ -161,7 +161,7 @@ export default async function OrderDetailPage({ params }: Props) {
         <DetailCard title="Processing">
           <DetailGrid>
             <DetailItem label="Payroll Processed" value={
-              <Badge variant={order.payroll_processed ? 'success' : 'secondary'}>
+              <Badge variant={order.payroll_processed ? 'success' : 'outline'}>
                 {order.payroll_processed ? 'Yes' : 'No'}
               </Badge>
             } />
