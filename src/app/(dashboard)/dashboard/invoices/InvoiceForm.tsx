@@ -106,7 +106,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const totalAmount = payrollValue + vatAmount;
 
   useEffect(() => {
-    fetchPlatforms();
+    fetchClients();
     if (!isEdit) {
       generateInvoiceNumber();
     } else {
