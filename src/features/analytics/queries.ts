@@ -506,7 +506,7 @@ export function useFinancialSummary(dateFrom?: string, dateTo?: string) {
         supabase.from('cod_collections').select('amount, status'),
       ]);
 
-      const totalRevenue = ordersRes.data?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+      const totalRevenue = ordersRes.data?.reduce((sum, o) => sum + (o.total_revenue || 0), 0) || 0;
       const totalPayroll = payrollRes.data?.reduce((sum, p) => sum + (p.total_net_pay || 0), 0) || 0;
       
       let totalInvoiced = 0;
