@@ -106,7 +106,7 @@ export function RiderDashboard({ employeeId }: { employeeId?: string }) {
         start_time: s.check_in || '',
         end_time: s.check_out || '',
         status: s.status,
-        client: s.shift?.client,
+        client: (s.shift as unknown as { client: { name: string } | null } | null)?.client,
       })) || []);
       setOrders(ordersData || []);
       setDocuments(docsData || []);
