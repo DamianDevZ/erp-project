@@ -71,10 +71,14 @@ export interface Contract {
  * Contract with related platform data.
  */
 export interface ContractWithRelations extends Contract {
-  platform: {
+  platform?: {
     id: string;
     name: string;
-  };
+  } | null;
+  client?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 /**

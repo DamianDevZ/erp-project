@@ -84,10 +84,14 @@ export interface InvoiceLineItem {
  * Invoice with related data.
  */
 export interface InvoiceWithRelations extends Invoice {
-  platform: {
+  platform?: {
     id: string;
     name: string;
-  };
+  } | null;
+  client?: {
+    id: string;
+    name: string;
+  } | null;
   line_items: InvoiceLineItem[];
 }
 
@@ -99,10 +103,14 @@ export interface WorkLogWithRelations extends WorkLog {
     id: string;
     full_name: string;
   };
-  platform: {
+  platform?: {
     id: string;
     name: string;
-  };
+  } | null;
+  client?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 /**

@@ -19,7 +19,8 @@ export interface CodCollection {
   status: 'pending' | 'remitted' | 'discrepancy';
   notes?: string;
   employee?: { id: string; full_name: string };
-  platform?: { id: string; name: string };
+  platform?: { id: string; name: string } | null;
+  client?: { id: string; name: string } | null;
 }
 
 export interface PettyCash {

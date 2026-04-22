@@ -79,6 +79,7 @@ export interface FinanceLedger {
  */
 export interface FinanceLedgerWithRelations extends FinanceLedger {
   platform?: { id: string; name: string } | null;
+  client?: { id: string; name: string } | null;
   contract?: { id: string; contract_name: string } | null;
   employee?: { id: string; full_name: string } | null;
   asset?: { id: string; name: string; license_plate: string | null } | null;

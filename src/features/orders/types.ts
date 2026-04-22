@@ -87,10 +87,14 @@ export interface Order {
  * Order with related data.
  */
 export interface OrderWithRelations extends Order {
-  platform: {
+  platform?: {
     id: string;
     name: string;
-  };
+  } | null;
+  client?: {
+    id: string;
+    name: string;
+  } | null;
   employee?: {
     id: string;
     full_name: string;
