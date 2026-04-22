@@ -579,7 +579,7 @@ async function generateOrdersByPlatformReport(
   const platformMap = new Map<string, { name: string; total: number; completed: number; value: number }>();
   
   for (const order of data || []) {
-    const platform = order.platform as unknown;
+    const platform = order.client as unknown;
     const platformData = (Array.isArray(platform) ? platform[0] : platform) as { name: string } | null;
     const existing = platformMap.get(order.platform_id) || { 
       name: platformData?.name || 'Unknown', 

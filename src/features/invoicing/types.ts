@@ -202,7 +202,7 @@ export const INVOICE_PAYMENT_STATUS_LABELS: Record<InvoicePaymentStatus, string>
 /**
  * Extended invoice with order-based generation fields.
  */
-export interface EnhancedInvoice extends Invoice {
+export interface EnhancedInvoice extends Omit<Invoice, 'client_id'> {
   generation_type: InvoiceGenerationType;
   client_id: string | null;
   contract_id: string | null;
