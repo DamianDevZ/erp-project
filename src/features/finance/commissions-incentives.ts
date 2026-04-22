@@ -757,7 +757,7 @@ export async function calculateRiderBonuses(
   // Group commissions by platform
   const commissionsByPlatform = new Map<string, number>();
   for (const c of commissions || []) {
-    const platform = c.platform as unknown;
+    const platform = c.client as unknown;
     const platformData = (Array.isArray(platform) ? platform[0] : platform) as { name: string } | null;
     const name = platformData?.name || 'Unknown';
     commissionsByPlatform.set(name, (commissionsByPlatform.get(name) || 0) + c.commission_amount);
@@ -869,7 +869,7 @@ export async function getCommissionSummary(): Promise<CommissionSummary> {
     }
     
     // Platform breakdown
-    const platform = c.platform as unknown;
+    const platform = c.client as unknown;
     const platformData = (Array.isArray(platform) ? platform[0] : platform) as { name: string } | null;
     const existing = platformMap.get(c.platform_id) || { name: platformData?.name || 'Unknown', orders: 0, total: 0 };
     existing.orders++;
