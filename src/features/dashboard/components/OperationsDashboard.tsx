@@ -90,8 +90,9 @@ export function OperationsDashboard() {
           .limit(30),
         supabase
           .from('assets')
-          .select('id, name, vehicle_status, asset_type, make, model, assigned_to')
-          .eq('type', 'vehicle'),
+          .select('id, name, vehicle_status, type, make, model, assigned_employee_id')
+          .eq('type', 'vehicle')
+          .neq('vehicle_status', 'disposed'),
         supabase
           .from('compliance_alerts')
           .select('id, title, severity')
@@ -154,7 +155,7 @@ export function OperationsDashboard() {
         id: v.id,
         name: v.name || `${v.make} ${v.model}`.trim() || 'Vehicle',
         status: v.vehicle_status || 'unknown',
-        type: v.asset_type || 'vehicle',
+        type: v.type || 'vehicle',
       }));
 
       // Attendance issues list (no-shows + late logins)

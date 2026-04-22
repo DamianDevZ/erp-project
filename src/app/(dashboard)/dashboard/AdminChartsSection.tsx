@@ -56,10 +56,20 @@ export function AdminChartsSection() {
       orders: p.total_orders,
     }));
 
-  const trendData = (ordersTrend ?? []).map(d => ({
-    date: new Date(d.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }),
-    orders: d.value,
-  }));
+  // Fill all 14 days so every date shows a tooltip (missing days = 0)
+  const trendData = (() => {
+    const byDate: Record<string, number> = {};
+    (ordersTrend ?? []).forEach(d => { byDate[d.date] = d.value; });
+    return Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      const key = d.toISOString().split('T')[0];
+      return {
+        date: d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }),
+        orders: byDate[key] ?? 0,
+      };
+    });
+  })();
 
   if (isLoading) {
     return (
