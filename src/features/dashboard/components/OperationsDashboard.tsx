@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { useClientContext } from '@/contexts';
@@ -209,8 +210,22 @@ export function OperationsDashboard() {
     );
   }
 
-  const clientLabel = showAllClients ? 'All Clients' : 
+  const clientLabel = showAllClients ? 'All Clients' :
     selectedClientIds.length > 0 ? `${selectedClientIds.length} Client(s)` : 'Your Clients';
+
+  const orderChartData = [
+    { name: 'Completed', value: stats.completedOrders, color: '#22c55e' },
+    { name: 'Pending', value: stats.pendingOrders, color: '#f59e0b' },
+    { name: 'Cancelled', value: stats.cancelledOrders, color: '#ef4444' },
+    { name: 'Rejected', value: stats.rejectedOrders, color: '#f97316' },
+  ].filter(d => d.value > 0);
+
+  const fleetChartData = [
+    { name: 'Assigned', value: stats.activeVehicles, color: '#22c55e' },
+    { name: 'Available', value: stats.idleVehicles, color: '#3b82f6' },
+    { name: 'Maintenance', value: stats.maintenanceVehicles, color: '#ef4444' },
+    { name: 'Off Road', value: stats.totalVehicles - stats.activeVehicles - stats.idleVehicles - stats.maintenanceVehicles, color: '#94a3b8' },
+  ].filter(d => d.value > 0);
 
   return (
     <div className="space-y-6">
@@ -221,12 +236,8 @@ export function OperationsDashboard() {
           <p className="text-muted">Real-time operations overview • {clientLabel}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dashboard/kpis">
-            <Button variant="outline">View KPIs</Button>
-          </Link>
-          <Link href="/dashboard/orders">
-            <Button>Manage Orders</Button>
-          </Link>
+          <Link href="/dashboard/kpis"><Button variant="outline">View KPIs</Button></Link>
+          <Link href="/dashboard/orders"><Button>Manage Orders</Button></Link>
         </div>
       </div>
 
@@ -239,92 +250,133 @@ export function OperationsDashboard() {
               <li key={alert.id} className="text-sm text-body">• {alert.title}</li>
             ))}
           </ul>
-          <Link href="/dashboard/compliance" className="text-sm text-primary hover:underline mt-2 inline-block">
-            View All Alerts →
-          </Link>
+          <Link href="/dashboard/compliance" className="text-sm text-primary hover:underline mt-2 inline-block">View All Alerts →</Link>
         </div>
       )}
 
-      {/* — SECTION 1: Order KPIs — */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Orders Today</h2>
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard label="Total" value={stats.todayOrders} />
-          <StatCard label="Pending" value={stats.pendingOrders} color="warning" />
-          <StatCard label="Completed" value={stats.completedOrders} color="success" />
-          <StatCard label="Completion Rate" value={`${stats.completionRate}%`} color="success" />
-          <StatCard label="Cancelled" value={stats.cancelledOrders} color="error" />
-          <StatCard label="Rejected" value={stats.rejectedOrders} color="error" />
-        </div>
+      {/* KPI strip */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Orders Today" value={stats.todayOrders} sub="deliveries processed" color="primary" />
+        <KpiCard label="Completion Rate" value={`${stats.completionRate}%`} sub={`${stats.completedOrders} of ${stats.todayOrders} completed`} color={stats.completionRate >= 80 ? 'success' : stats.completionRate >= 60 ? 'warning' : 'error'} />
+        <KpiCard label="Active Riders" value={stats.activeRiders} sub="currently on duty" color="success" />
+        <KpiCard label="COD Outstanding" value={`${stats.openCodAmount.toFixed(3)} BHD`} sub={`${stats.openCods} unreturned`} color={stats.openCods > 0 ? 'error' : 'success'} />
       </div>
 
-      {/* — SECTION 2: Attendance & Riders — */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Attendance Today</h2>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <StatCard label="Active Riders" value={stats.activeRiders} color="success" />
-          <StatCard label="No Shows" value={stats.noShows} color="error" />
-          <StatCard label="Late Logins" value={stats.lateLogins} color="warning" />
-          <StatCard label="CODs Outstanding" value={stats.openCods} color={stats.openCods > 0 ? 'error' : 'success'} />
-        </div>
-      </div>
-
-      {/* — SECTION 3: Fleet — */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Fleet Status</h2>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <StatCard label="Total Vehicles" value={stats.totalVehicles} />
-          <StatCard label="Active (Assigned)" value={stats.activeVehicles} color="success" />
-          <StatCard label="Idle (Available)" value={stats.idleVehicles} color="warning" />
-          <StatCard label="In Maintenance" value={stats.maintenanceVehicles} color="error" />
-        </div>
-        {fleetBreakdown.length > 0 && (
-          <div className="mt-3 rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-hover">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">Vehicle</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">Type</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {fleetBreakdown.map((v) => (
-                  <tr key={v.id} className="hover:bg-hover">
-                    <td className="px-4 py-2 font-medium text-heading">{v.name}</td>
-                    <td className="px-4 py-2 text-muted capitalize">{v.type}</td>
-                    <td className="px-4 py-2">
-                      <Badge variant={
-                        v.status === 'assigned' ? 'success' :
-                        v.status === 'maintenance' ? 'error' :
-                        v.status === 'available' ? 'warning' : 'outline'
-                      }>
-                        {v.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {stats.totalVehicles > 10 && (
-              <div className="px-4 py-2 text-xs text-muted bg-hover border-t border-border">
-                Showing 10 of {stats.totalVehicles} —{' '}
-                <Link href="/dashboard/assets" className="text-primary hover:underline">View all</Link>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* — SECTION 4: Attendance Issues + CODs — */}
+      {/* Charts row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Attendance issues */}
+        {/* Order status donut */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Status Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.todayOrders > 0 ? (
+              <div className="flex items-center gap-6">
+                <div className="relative h-44 w-44 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={orderChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
+                        {orderChartData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v, n) => [v, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-heading">{stats.todayOrders}</span>
+                    <span className="text-xs text-muted">total</span>
+                  </div>
+                </div>
+                <div className="space-y-2 flex-1">
+                  {orderChartData.map((d) => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-sm text-body">{d.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.todayOrders) * 100}%`, background: d.color }} />
+                        </div>
+                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted text-center py-10">No orders today.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Fleet status donut */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fleet Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.totalVehicles > 0 ? (
+              <div className="flex items-center gap-6">
+                <div className="relative h-44 w-44 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={fleetChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
+                        {fleetChartData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v, n) => [v, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-heading">{stats.totalVehicles}</span>
+                    <span className="text-xs text-muted">vehicles</span>
+                  </div>
+                </div>
+                <div className="space-y-2 flex-1">
+                  {fleetChartData.map((d) => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-sm text-body">{d.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.totalVehicles) * 100}%`, background: d.color }} />
+                        </div>
+                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted text-center py-10">No vehicles registered.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Attendance row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <AttendanceCard label="No Shows" value={stats.noShows} total={stats.activeRiders + stats.noShows} color="#ef4444" />
+        <AttendanceCard label="Late Logins" value={stats.lateLogins} total={stats.activeRiders} color="#f59e0b" />
+        <AttendanceCard label="On Time" value={stats.activeRiders - stats.lateLogins} total={stats.activeRiders} color="#22c55e" />
+        <div className="rounded-lg border border-border bg-card p-4 flex flex-col justify-center">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Pending Orders</p>
+          <p className="text-3xl font-bold text-warning">{stats.pendingOrders}</p>
+          <p className="text-xs text-muted mt-1">awaiting delivery</p>
+        </div>
+      </div>
+
+      {/* Attendance issues + CODs */}
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Attendance Issues</CardTitle>
-            <Link href="/dashboard/shifts">
-              <Button variant="outline" size="sm">View Shifts</Button>
-            </Link>
+            <Link href="/dashboard/shifts"><Button variant="outline" size="sm">View Shifts</Button></Link>
           </CardHeader>
           <CardContent>
             {attendanceIssues.length > 0 ? (
@@ -345,79 +397,32 @@ export function OperationsDashboard() {
           </CardContent>
         </Card>
 
-        {/* COD outstanding */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>COD Outstanding</CardTitle>
-            <Link href="/dashboard/finance">
-              <Button variant="outline" size="sm">COD Tracking</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {stats.openCods > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg bg-error/5 border border-error/20 p-4">
-                  <div>
-                    <p className="text-2xl font-bold text-error">{stats.openCods}</p>
-                    <p className="text-sm text-muted">Unreturned CODs today</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-error">
-                      {stats.openCodAmount.toFixed(3)} BHD
-                    </p>
-                    <p className="text-xs text-muted">Total outstanding</p>
-                  </div>
-                </div>
-                <Link
-                  href="/dashboard/finance"
-                  className="block text-center text-sm text-primary hover:underline"
-                >
-                  View full COD tracking →
-                </Link>
-              </div>
-            ) : (
-              <p className="text-muted text-center py-8">No outstanding CODs today.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* — SECTION 5: Live Orders + Active Riders — */}
-      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Live Orders</CardTitle>
-            <Link href="/dashboard/orders">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
+            <Link href="/dashboard/orders"><Button variant="outline" size="sm">View All</Button></Link>
           </CardHeader>
           <CardContent>
             {recentOrders.length > 0 ? (
-              <div className="space-y-3">
-                {recentOrders.map((order) => (
+              <div className="space-y-2">
+                {recentOrders.slice(0, 6).map((order) => (
                   <div key={order.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                     <div>
-                      <Link href={`/dashboard/orders/${order.id}`} className="font-medium text-primary hover:underline">
+                      <Link href={`/dashboard/orders/${order.id}`} className="font-medium text-primary hover:underline text-sm">
                         #{order.external_order_id}
                       </Link>
-                      <p className="text-sm text-muted">
+                      <p className="text-xs text-muted">
                         {(order.employee as unknown as { full_name: string } | null)?.full_name || 'Unassigned'} •{' '}
                         {(order.client as unknown as { name: string } | null)?.name}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <Badge variant={
-                        order.status === 'completed' ? 'success' :
-                        order.status === 'in_transit' ? 'default' :
-                        order.status === 'pending' ? 'warning' :
-                        order.status === 'cancelled' || order.status === 'rejected' ? 'error' : 'outline'
-                      }>
-                        {order.status.replace(/_/g, ' ')}
-                      </Badge>
-                      <p className="text-xs text-muted mt-1">
-                        {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
+                    <Badge variant={
+                      order.status === 'completed' ? 'success' :
+                      order.status === 'pending' ? 'warning' :
+                      order.status === 'cancelled' || order.status === 'rejected' ? 'error' : 'default'
+                    }>
+                      {order.status.replace(/_/g, ' ')}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -426,63 +431,18 @@ export function OperationsDashboard() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Active Riders</CardTitle>
-            <Link href="/dashboard/shifts">
-              <Button variant="outline" size="sm">View Shifts</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {activeShifts.length > 0 ? (
-              <div className="space-y-3">
-                {activeShifts.map((shift) => (
-                  <div key={shift.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                      <div>
-                        <p className="font-medium text-heading">
-                          {(shift.employee as unknown as { full_name: string } | null)?.full_name}
-                        </p>
-                        <p className="text-sm text-muted">
-                          Checked in {new Date(shift.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="success">On Duty</Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted text-center py-8">No riders currently on duty.</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Quick actions */}
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Link href="/dashboard/shifts/new">
-              <Button variant="outline">Create Shift</Button>
-            </Link>
-            <Link href="/dashboard/coaching/new">
-              <Button variant="outline">Log Coaching</Button>
-            </Link>
-            <Link href="/dashboard/incidents/new">
-              <Button variant="outline">Report Incident</Button>
-            </Link>
-            <Link href="/dashboard/assets">
-              <Button variant="outline">Manage Fleet</Button>
-            </Link>
-            <Link href="/dashboard/finance">
-              <Button variant="outline">COD Tracking</Button>
-            </Link>
+            <Link href="/dashboard/shifts/new"><Button variant="outline">Create Shift</Button></Link>
+            <Link href="/dashboard/coaching/new"><Button variant="outline">Log Coaching</Button></Link>
+            <Link href="/dashboard/incidents/new"><Button variant="outline">Report Incident</Button></Link>
+            <Link href="/dashboard/assets"><Button variant="outline">Manage Fleet</Button></Link>
+            <Link href="/dashboard/finance"><Button variant="outline">COD Tracking</Button></Link>
           </div>
         </CardContent>
       </Card>
@@ -490,15 +450,31 @@ export function OperationsDashboard() {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number | string; color?: 'success' | 'warning' | 'error' }) {
-  const colorClass = color === 'success' ? 'text-success' : color === 'warning' ? 'text-warning' : color === 'error' ? 'text-error' : 'text-heading';
+function KpiCard({ label, value, sub, color }: { label: string; value: string | number; sub: string; color: 'primary' | 'success' | 'warning' | 'error' }) {
+  const colorClass = { primary: 'text-primary', success: 'text-success', warning: 'text-warning', error: 'text-error' }[color];
+  const borderClass = { primary: 'border-l-primary', success: 'border-l-success', warning: 'border-l-warning', error: 'border-l-error' }[color];
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className={`text-3xl font-bold ${colorClass}`}>{value}</div>
-        <p className="text-sm text-muted mt-1">{label}</p>
-      </CardContent>
-    </Card>
+    <div className={`rounded-lg border border-border border-l-4 ${borderClass} bg-card p-4`}>
+      <p className="text-xs font-semibold text-muted uppercase tracking-wide">{label}</p>
+      <p className={`text-3xl font-bold mt-1 ${colorClass}`}>{value}</p>
+      <p className="text-xs text-muted mt-1">{sub}</p>
+    </div>
   );
 }
 
+function AttendanceCard({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <p className="text-xs font-semibold text-muted uppercase tracking-wide">{label}</p>
+      <p className="text-3xl font-bold mt-1 text-heading">{value}</p>
+      <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <p className="text-xs text-muted mt-1">{pct}% of shifts</p>
+    </div>
+  );
+}
+
+
+      {/* — SECTION 1: Order KPIs — */}

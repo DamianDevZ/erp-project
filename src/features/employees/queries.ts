@@ -79,7 +79,7 @@ export function useEmployees(
         query = query.eq('department_id', filters.department_id);
       }
       if (filters?.search) {
-        query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,employee_number.ilike.%${filters.search}%`);
+        query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,employee_id.ilike.%${filters.search}%`);
       }
 
       // Apply sorting

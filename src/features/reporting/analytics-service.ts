@@ -615,7 +615,7 @@ async function generateRiderPerformanceReport(
   
   const { data: riders } = await supabase
     .from('employees')
-    .select('id, full_name, employee_number')
+    .select('id, full_name, employee_id')
     .eq('role', 'rider')
     .eq('status', 'active');
   
@@ -651,7 +651,7 @@ async function generateRiderPerformanceReport(
     results.push({
       riderId: rider.id,
       riderName: rider.full_name,
-      employeeNumber: rider.employee_number,
+      employeeNumber: rider.employee_id,
       ordersCompleted: orders || 0,
       averageRating: avgRating,
       incidents: incidents || 0,

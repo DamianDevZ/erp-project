@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { useClientContext } from '@/contexts';
@@ -142,8 +143,26 @@ export function FinanceDashboard() {
     );
   }
 
-  const clientLabel = showAllClients ? 'All Clients' : 
+  const clientLabel = showAllClients ? 'All Clients' :
     selectedClientIds.length > 0 ? `${selectedClientIds.length} Client(s)` : 'Your Clients';
+
+  const paidInvoices = recentInvoices.filter(i => i.status === 'paid').length;
+  const sentInvoices = recentInvoices.filter(i => i.status === 'sent' || i.status === 'draft').length;
+  const totalInvoiceCount = recentInvoices.length || 1;
+
+  const invoiceChartData = [
+    { name: 'Paid', value: paidInvoices, color: '#22c55e' },
+    { name: 'Pending', value: sentInvoices, color: '#3b82f6' },
+    { name: 'Overdue', value: stats.overdueInvoices, color: '#ef4444' },
+  ].filter(d => d.value > 0);
+
+  const revenueBarData = [
+    { name: 'Revenue', value: stats.totalRevenue },
+    { name: 'Payroll Cost', value: stats.totalPayrollCost },
+    { name: 'Gross Profit', value: stats.grossProfit },
+  ];
+
+  const margin = stats.totalRevenue > 0 ? Math.round((stats.grossProfit / stats.totalRevenue) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -151,15 +170,11 @@ export function FinanceDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-heading">Finance Dashboard</h1>
-          <p className="text-muted">Financial overview â€¢ {clientLabel}</p>
+          <p className="text-muted">Financial overview • {clientLabel}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dashboard/invoices/new">
-            <Button variant="outline">Create Invoice</Button>
-          </Link>
-          <Link href="/dashboard/payroll/new">
-            <Button>Run Payroll</Button>
-          </Link>
+          <Link href="/dashboard/invoices/new"><Button variant="outline">Create Invoice</Button></Link>
+          <Link href="/dashboard/payroll/new"><Button>Run Payroll</Button></Link>
         </div>
       </div>
 
@@ -167,117 +182,128 @@ export function FinanceDashboard() {
       {(stats.overdueInvoices > 0 || stats.payrollPending > 0) && (
         <div className="rounded-lg border border-warning bg-warning/10 p-4">
           <h3 className="font-semibold text-warning">Requires Attention</h3>
-          <ul className="mt-2 space-y-1 text-sm text-body">
-            {stats.overdueInvoices > 0 && (
-              <li>â€¢ {stats.overdueInvoices} invoice(s) are overdue</li>
-            )}
-            {stats.payrollPending > 0 && (
-              <li>â€¢ {stats.payrollPending} payroll batch(es) pending processing</li>
-            )}
-          </ul>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {stats.overdueInvoices > 0 && <span className="text-sm text-body">⚠ {stats.overdueInvoices} invoice(s) overdue</span>}
+            {stats.payrollPending > 0 && <span className="text-sm text-body">💰 {stats.payrollPending} payroll batch(es) pending</span>}
+          </div>
         </div>
       )}
 
-      {/* Financial KPIs */}
+      {/* KPI strip */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-heading">{formatCurrency(stats.totalRevenue)}</div>
-            <p className="text-sm text-muted">Revenue (Paid)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-warning">{formatCurrency(stats.pendingInvoiceAmount)}</div>
-            <p className="text-sm text-muted">Pending ({stats.pendingInvoices} invoices)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-success">{formatCurrency(stats.codCollected)}</div>
-            <p className="text-sm text-muted">COD Collected (30d)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-warning">{formatCurrency(stats.codPending)}</div>
-            <p className="text-sm text-muted">COD Pending</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cost Overview */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Cost Overview</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-error">{formatCurrency(stats.totalPayrollCost)}</div>
-              <p className="text-sm text-muted">Payroll Cost (Paid)</p>
-              <p className="text-xs text-muted mt-1">{stats.payrollBatchCount} batches</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className={`text-2xl font-bold ${stats.grossProfit >= 0 ? 'text-success' : 'text-error'}`}>
-                {formatCurrency(stats.grossProfit)}
-              </div>
-              <p className="text-sm text-muted">Gross Profit</p>
-              <p className="text-xs text-muted mt-1">Revenue − Payroll</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-warning">{formatCurrency(stats.codPending)}</div>
-              <p className="text-sm text-muted">Outstanding CODs</p>
-              <Link href="/dashboard/finance" className="text-xs text-primary hover:underline mt-1 block">
-                View COD tracking →
-              </Link>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-heading">
-                {stats.totalRevenue > 0
-                  ? `${Math.round((stats.grossProfit / stats.totalRevenue) * 100)}%`
-                  : '—'}
-              </div>
-              <p className="text-sm text-muted">Gross Margin</p>
-              <Link href="/dashboard/reports" className="text-xs text-primary hover:underline mt-1 block">
-                Full report →
-              </Link>
-            </CardContent>
-          </Card>
+        <div className="rounded-lg border border-border border-l-4 border-l-success bg-card p-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Total Revenue</p>
+          <p className="text-2xl font-bold mt-1 text-success">{formatCurrency(stats.totalRevenue)}</p>
+          <p className="text-xs text-muted mt-1">paid invoices</p>
+        </div>
+        <div className={`rounded-lg border border-border border-l-4 ${stats.grossProfit >= 0 ? 'border-l-primary' : 'border-l-error'} bg-card p-4`}>
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Gross Profit</p>
+          <p className={`text-2xl font-bold mt-1 ${stats.grossProfit >= 0 ? 'text-primary' : 'text-error'}`}>{formatCurrency(stats.grossProfit)}</p>
+          <p className="text-xs text-muted mt-1">{margin}% margin</p>
+        </div>
+        <div className="rounded-lg border border-border border-l-4 border-l-error bg-card p-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Payroll Cost</p>
+          <p className="text-2xl font-bold mt-1 text-error">{formatCurrency(stats.totalPayrollCost)}</p>
+          <p className="text-xs text-muted mt-1">{stats.payrollBatchCount} batch(es)</p>
+        </div>
+        <div className="rounded-lg border border-border border-l-4 border-l-warning bg-card p-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Pending Invoices</p>
+          <p className="text-2xl font-bold mt-1 text-warning">{formatCurrency(stats.pendingInvoiceAmount)}</p>
+          <p className="text-xs text-muted mt-1">{stats.pendingInvoices} invoice(s)</p>
         </div>
       </div>
 
+      {/* Charts row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent invoices */}
+        {/* Invoice status donut */}
+        <Card>
+          <CardHeader><CardTitle>Invoice Status</CardTitle></CardHeader>
+          <CardContent>
+            {invoiceChartData.length > 0 ? (
+              <div className="flex items-center gap-6">
+                <div className="relative h-44 w-44 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={invoiceChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
+                        {invoiceChartData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v, n) => [v, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-heading">{recentInvoices.length}</span>
+                    <span className="text-xs text-muted">invoices</span>
+                  </div>
+                </div>
+                <div className="space-y-3 flex-1">
+                  {invoiceChartData.map((d) => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-sm text-body">{d.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(d.value / totalInvoiceCount) * 100}%`, background: d.color }} />
+                        </div>
+                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted text-center py-10">No invoice data.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Revenue vs Cost bar chart */}
+        <Card>
+          <CardHeader><CardTitle>Revenue vs Cost</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueBarData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v) => [formatCurrency(Number(v)), '']} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {revenueBarData.map((entry, i) => (
+                      <Cell key={i} fill={i === 0 ? '#22c55e' : i === 1 ? '#ef4444' : entry.value >= 0 ? '#3b82f6' : '#f97316'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent invoices + Payroll */}
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Invoices</CardTitle>
-            <Link href="/dashboard/invoices">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
+            <Link href="/dashboard/invoices"><Button variant="outline" size="sm">View All</Button></Link>
           </CardHeader>
           <CardContent>
             {recentInvoices.length > 0 ? (
-              <div className="space-y-3">
-                {recentInvoices.map((invoice) => (
+              <div className="space-y-2">
+                {recentInvoices.slice(0, 5).map((invoice) => (
                   <div key={invoice.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                     <div>
-                      <Link href={`/dashboard/invoices/${invoice.id}`} className="font-medium text-primary hover:underline">
+                      <Link href={`/dashboard/invoices/${invoice.id}`} className="font-medium text-primary hover:underline text-sm">
                         {invoice.invoice_number}
                       </Link>
-                      <p className="text-sm text-muted">{invoice.platform?.name || invoice.title}</p>
+                      <p className="text-xs text-muted">{(invoice.platform as unknown as { name: string } | null)?.name || invoice.title}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-heading">{formatCurrency(invoice.total || 0)}</p>
-                      <Badge variant={
-                        invoice.status === 'paid' ? 'success' :
-                        invoice.status === 'overdue' ? 'error' :
-                        invoice.status === 'sent' ? 'default' : 'outline'
-                      }>
+                      <p className="font-medium text-heading text-sm">{formatCurrency(invoice.total || 0)}</p>
+                      <Badge variant={invoice.status === 'paid' ? 'success' : invoice.status === 'overdue' ? 'error' : invoice.status === 'sent' ? 'default' : 'outline'}>
                         {invoice.status}
                       </Badge>
                     </div>
@@ -290,33 +316,25 @@ export function FinanceDashboard() {
           </CardContent>
         </Card>
 
-        {/* Payroll batches */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Payroll Batches</CardTitle>
-            <Link href="/dashboard/payroll">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
+            <Link href="/dashboard/payroll"><Button variant="outline" size="sm">View All</Button></Link>
           </CardHeader>
           <CardContent>
             {payrollBatches.length > 0 ? (
-              <div className="space-y-3">
-                {payrollBatches.map((batch) => (
+              <div className="space-y-2">
+                {payrollBatches.slice(0, 5).map((batch) => (
                   <div key={batch.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                     <div>
-                      <p className="font-medium text-heading">
-                        {new Date(batch.period_start).toLocaleDateString('en-GB')} - {new Date(batch.period_end).toLocaleDateString('en-GB')}
+                      <p className="font-medium text-heading text-sm">
+                        {new Date(batch.period_start).toLocaleDateString('en-GB')} – {new Date(batch.period_end).toLocaleDateString('en-GB')}
                       </p>
-                      <p className="text-sm text-muted">
-                        Gross: {formatCurrency(batch.total_gross || 0)}
-                      </p>
+                      <p className="text-xs text-muted">Gross: {formatCurrency(batch.total_gross || 0)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-heading">{formatCurrency(batch.total_net || 0)}</p>
-                      <Badge variant={
-                        batch.status === 'completed' ? 'success' :
-                        batch.status === 'processing' ? 'default' : 'warning'
-                      }>
+                      <p className="font-medium text-heading text-sm">{formatCurrency(batch.total_net || 0)}</p>
+                      <Badge variant={batch.status === 'completed' ? 'success' : batch.status === 'processing' ? 'default' : 'warning'}>
                         {batch.status}
                       </Badge>
                     </div>
@@ -332,26 +350,14 @@ export function FinanceDashboard() {
 
       {/* Quick actions */}
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Link href="/dashboard/invoices/new">
-              <Button variant="outline">Create Invoice</Button>
-            </Link>
-            <Link href="/dashboard/payroll/new">
-              <Button variant="outline">Run Payroll</Button>
-            </Link>
-            <Link href="/dashboard/finance">
-              <Button variant="outline">COD Tracking</Button>
-            </Link>
-            <Link href="/dashboard/vendors">
-              <Button variant="outline">Vendors</Button>
-            </Link>
-            <Link href="/dashboard/reports">
-              <Button variant="outline">Generate Report</Button>
-            </Link>
+            <Link href="/dashboard/invoices/new"><Button variant="outline">Create Invoice</Button></Link>
+            <Link href="/dashboard/payroll/new"><Button variant="outline">Run Payroll</Button></Link>
+            <Link href="/dashboard/finance"><Button variant="outline">COD Tracking</Button></Link>
+            <Link href="/dashboard/vendors"><Button variant="outline">Vendors</Button></Link>
+            <Link href="/dashboard/reports"><Button variant="outline">Generate Report</Button></Link>
           </div>
         </CardContent>
       </Card>

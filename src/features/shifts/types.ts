@@ -64,7 +64,7 @@ export interface ShiftAssignment {
   employee?: {
     id: string;
     full_name: string;
-    employee_number: string | null;
+    employee_id: string | null;
     phone: string | null;
   };
   vehicle?: {

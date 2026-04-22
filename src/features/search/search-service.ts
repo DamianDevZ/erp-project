@@ -157,8 +157,8 @@ export async function globalSearch(
   if (entityTypes.includes('employee')) {
     const { data: employees } = await supabase
       .from('employees')
-      .select('id, full_name, email, employee_number, role, status')
-      .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm},employee_number.ilike.${searchTerm}`)
+      .select('id, full_name, email, employee_id, role, status')
+      .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm},employee_id.ilike.${searchTerm}`)
       .limit(limit);
     
     for (const emp of employees || []) {
@@ -166,11 +166,11 @@ export async function globalSearch(
         entityType: 'employee',
         entityId: emp.id,
         title: emp.full_name,
-        subtitle: emp.employee_number,
+        subtitle: emp.employee_id,
         description: emp.email,
         status: emp.status,
         url: `/dashboard/employees/${emp.id}`,
-        relevanceScore: calculateRelevance(query, [emp.full_name, emp.email, emp.employee_number]),
+        relevanceScore: calculateRelevance(query, [emp.full_name, emp.email, emp.employee_id]),
         highlightedText: highlightMatch(emp.full_name, query),
       });
     }
@@ -180,9 +180,9 @@ export async function globalSearch(
   if (entityTypes.includes('rider')) {
     const { data: riders } = await supabase
       .from('employees')
-      .select('id, full_name, email, employee_number, status')
+      .select('id, full_name, email, employee_id, status')
       .eq('role', 'rider')
-      .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm},employee_number.ilike.${searchTerm}`)
+      .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm},employee_id.ilike.${searchTerm}`)
       .limit(limit);
     
     for (const rider of riders || []) {
@@ -190,11 +190,11 @@ export async function globalSearch(
         entityType: 'rider',
         entityId: rider.id,
         title: rider.full_name,
-        subtitle: rider.employee_number,
+        subtitle: rider.employee_id,
         description: rider.email,
         status: rider.status,
         url: `/dashboard/riders/${rider.id}`,
-        relevanceScore: calculateRelevance(query, [rider.full_name, rider.email, rider.employee_number]),
+        relevanceScore: calculateRelevance(query, [rider.full_name, rider.email, rider.employee_id]),
         highlightedText: highlightMatch(rider.full_name, query),
       });
     }

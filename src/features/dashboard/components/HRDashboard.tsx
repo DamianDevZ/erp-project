@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { useClientContext } from '@/contexts';
@@ -138,8 +139,20 @@ export function HRDashboard() {
     );
   }
 
-  const clientLabel = showAllClients ? 'All Clients' : 
+  const clientLabel = showAllClients ? 'All Clients' :
     selectedClientIds.length > 0 ? `${selectedClientIds.length} Client(s)` : 'Your Clients';
+
+  const inactive = stats.totalEmployees - stats.activeEmployees - stats.pendingOnboarding;
+  const empChartData = [
+    { name: 'Active', value: stats.activeEmployees, color: '#22c55e' },
+    { name: 'Onboarding', value: stats.pendingOnboarding, color: '#3b82f6' },
+    { name: 'Inactive', value: inactive > 0 ? inactive : 0, color: '#94a3b8' },
+  ].filter(d => d.value > 0);
+
+  const complianceChartData = [
+    { name: 'Compliant', value: stats.totalEmployees - stats.nonCompliant, color: '#22c55e' },
+    { name: 'Non-Compliant', value: stats.nonCompliant, color: '#ef4444' },
+  ].filter(d => d.value > 0);
 
   return (
     <div className="space-y-6">
@@ -149,79 +162,146 @@ export function HRDashboard() {
           <h1 className="text-2xl font-bold text-heading">HR Dashboard</h1>
           <p className="text-muted">Employee management overview • {clientLabel}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/dashboard/employees/new">
-            <Button>Add Employee</Button>
-          </Link>
-        </div>
+        <Link href="/dashboard/employees/new"><Button>Add Employee</Button></Link>
       </div>
 
-      {/* Alerts */}
-      {(stats.nonCompliant > 0 || stats.pendingLeaves > 0) && (
+      {/* Alerts banner */}
+      {(stats.nonCompliant > 0 || stats.pendingLeaves > 0 || stats.expiringDocuments > 0) && (
         <div className="rounded-lg border border-warning bg-warning/10 p-4">
           <h3 className="font-semibold text-warning">Requires Attention</h3>
-          <ul className="mt-2 space-y-1 text-sm text-body">
-            {stats.nonCompliant > 0 && (
-              <li>• {stats.nonCompliant} employee(s) have compliance issues</li>
-            )}
-            {stats.pendingLeaves > 0 && (
-              <li>• {stats.pendingLeaves} leave request(s) pending approval</li>
-            )}
-            {stats.expiringDocuments > 0 && (
-              <li>• {stats.expiringDocuments} document(s) expiring within 30 days</li>
-            )}
-          </ul>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {stats.nonCompliant > 0 && <span className="text-sm text-body">⚠ {stats.nonCompliant} compliance issue(s)</span>}
+            {stats.pendingLeaves > 0 && <span className="text-sm text-body">📋 {stats.pendingLeaves} leave request(s) pending</span>}
+            {stats.expiringDocuments > 0 && <span className="text-sm text-body">📄 {stats.expiringDocuments} document(s) expiring soon</span>}
+          </div>
         </div>
       )}
 
-      {/* Stats cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      {/* KPI strip */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border border-border border-l-4 border-l-primary bg-card p-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Total Headcount</p>
+          <p className="text-3xl font-bold mt-1 text-primary">{stats.totalEmployees}</p>
+          <p className="text-xs text-muted mt-1">{stats.activeEmployees} active this month</p>
+        </div>
+        <div className="rounded-lg border border-border border-l-4 border-l-warning bg-card p-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Leave Requests</p>
+          <p className="text-3xl font-bold mt-1 text-warning">{stats.pendingLeaves}</p>
+          <p className="text-xs text-muted mt-1">pending approval</p>
+        </div>
+        <div className="rounded-lg border border-border border-l-4 border-l-error bg-card p-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">Expiring Docs</p>
+          <p className="text-3xl font-bold mt-1 text-error">{stats.expiringDocuments}</p>
+          <p className="text-xs text-muted mt-1">within 30 days</p>
+        </div>
+      </div>
+
+      {/* Charts row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Employee status donut */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-heading">{stats.totalEmployees}</div>
-            <p className="text-sm text-muted">Total Employees</p>
+          <CardHeader><CardTitle>Workforce Status</CardTitle></CardHeader>
+          <CardContent>
+            {stats.totalEmployees > 0 ? (
+              <div className="flex items-center gap-6">
+                <div className="relative h-44 w-44 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={empChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
+                        {empChartData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v, n) => [v, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-heading">{stats.totalEmployees}</span>
+                    <span className="text-xs text-muted">total</span>
+                  </div>
+                </div>
+                <div className="space-y-3 flex-1">
+                  {empChartData.map((d) => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-sm text-body">{d.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.totalEmployees) * 100}%`, background: d.color }} />
+                        </div>
+                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted text-center py-10">No employee data.</p>
+            )}
           </CardContent>
         </Card>
+
+        {/* Compliance donut */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-success">{stats.activeEmployees}</div>
-            <p className="text-sm text-muted">Active</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-warning">{stats.pendingOnboarding}</div>
-            <p className="text-sm text-muted">Onboarding</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-warning">{stats.pendingLeaves}</div>
-            <p className="text-sm text-muted">Pending Leaves</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-warning">{stats.expiringDocuments}</div>
-            <p className="text-sm text-muted">Expiring Docs</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-error">{stats.nonCompliant}</div>
-            <p className="text-sm text-muted">Non-Compliant</p>
+          <CardHeader><CardTitle>Document Compliance</CardTitle></CardHeader>
+          <CardContent>
+            {stats.totalEmployees > 0 ? (
+              <div className="flex items-center gap-6">
+                <div className="relative h-44 w-44 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={complianceChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
+                        {complianceChartData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v, n) => [v, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-heading">
+                      {stats.totalEmployees > 0 ? Math.round(((stats.totalEmployees - stats.nonCompliant) / stats.totalEmployees) * 100) : 0}%
+                    </span>
+                    <span className="text-xs text-muted">compliant</span>
+                  </div>
+                </div>
+                <div className="space-y-3 flex-1">
+                  {complianceChartData.map((d) => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-sm text-body">{d.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.totalEmployees) * 100}%`, background: d.color }} />
+                        </div>
+                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {stats.expiringDocuments > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <p className="text-xs text-warning">⚠ {stats.expiringDocuments} document(s) expiring within 30 days</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted text-center py-10">No compliance data.</p>
+            )}
           </CardContent>
         </Card>
       </div>
 
+      {/* Pending leaves + Expiring docs */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Pending leave requests */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Pending Leave Requests</CardTitle>
-            <Link href="/dashboard/leaves">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
+            <Link href="/dashboard/leaves"><Button variant="outline" size="sm">View All</Button></Link>
           </CardHeader>
           <CardContent>
             {pendingLeaves.length > 0 ? (
@@ -229,14 +309,12 @@ export function HRDashboard() {
                 {pendingLeaves.map((leave) => (
                   <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                     <div>
-                      <p className="font-medium text-heading">{leave.employee?.full_name}</p>
-                      <p className="text-sm text-muted">
-                        {leave.leave_type} • {new Date(leave.start_date).toLocaleDateString('en-GB')} - {new Date(leave.end_date).toLocaleDateString('en-GB')}
+                      <p className="font-medium text-heading">{(leave.employee as unknown as { full_name: string } | null)?.full_name}</p>
+                      <p className="text-sm text-muted capitalize">
+                        {leave.leave_type?.replace(/_/g, ' ')} • {new Date(leave.start_date).toLocaleDateString('en-GB')} – {new Date(leave.end_date).toLocaleDateString('en-GB')}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">Review</Button>
-                    </div>
+                    <Badge variant="warning">Pending</Badge>
                   </div>
                 ))}
               </div>
@@ -246,30 +324,26 @@ export function HRDashboard() {
           </CardContent>
         </Card>
 
-        {/* Expiring documents */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Expiring Documents</CardTitle>
-            <Link href="/dashboard/documents">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
+            <Link href="/dashboard/documents"><Button variant="outline" size="sm">View All</Button></Link>
           </CardHeader>
           <CardContent>
             {expiringDocs.length > 0 ? (
               <div className="space-y-3">
                 {expiringDocs.map((doc) => {
-                  const daysUntil = Math.ceil(
-                    (new Date(doc.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                  );
+                  const daysUntil = Math.ceil((new Date(doc.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   return (
                     <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                       <div>
-                        <p className="font-medium text-heading">{doc.employee?.full_name}</p>
-                        <p className="text-sm text-muted capitalize">{doc.type.replace(/_/g, ' ')}</p>
+                        <p className="font-medium text-heading">{(doc.employee as unknown as { full_name: string } | null)?.full_name}</p>
+                        <p className="text-sm text-muted capitalize">{doc.type?.replace(/_/g, ' ')}</p>
                       </div>
-                      <Badge variant={daysUntil <= 7 ? 'error' : 'warning'}>
-                        {daysUntil} days
-                      </Badge>
+                      <div className="text-right">
+                        <Badge variant={daysUntil <= 7 ? 'error' : 'warning'}>{daysUntil}d</Badge>
+                        <p className="text-xs text-muted mt-0.5">{new Date(doc.expires_at).toLocaleDateString('en-GB')}</p>
+                      </div>
                     </div>
                   );
                 })}
@@ -283,26 +357,14 @@ export function HRDashboard() {
 
       {/* Quick actions */}
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Link href="/dashboard/employees/new">
-              <Button variant="outline">Add Employee</Button>
-            </Link>
-            <Link href="/dashboard/leaves">
-              <Button variant="outline">Manage Leaves</Button>
-            </Link>
-            <Link href="/dashboard/documents">
-              <Button variant="outline">Document Center</Button>
-            </Link>
-            <Link href="/dashboard/training">
-              <Button variant="outline">Training</Button>
-            </Link>
-            <Link href="/dashboard/referrals">
-              <Button variant="outline">Referrals</Button>
-            </Link>
+            <Link href="/dashboard/employees/new"><Button variant="outline">Add Employee</Button></Link>
+            <Link href="/dashboard/leaves"><Button variant="outline">Manage Leaves</Button></Link>
+            <Link href="/dashboard/documents"><Button variant="outline">Document Center</Button></Link>
+            <Link href="/dashboard/training"><Button variant="outline">Training</Button></Link>
+            <Link href="/dashboard/referrals"><Button variant="outline">Referrals</Button></Link>
           </div>
         </CardContent>
       </Card>

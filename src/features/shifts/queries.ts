@@ -99,7 +99,7 @@ export function useShift(id: string | null) {
           client:clients(id, name),
           assignments:shift_assignments(
             id,
-            employee:employees(id, full_name, employee_number),
+            employee:employees(id, full_name, employee_id),
             status
           )
         `)
@@ -124,7 +124,7 @@ export function useShiftAssignments(shiftId: string | null) {
         .from('shift_assignments')
         .select(`
           *,
-          employee:employees(id, full_name, employee_number, phone),
+          employee:employees(id, full_name, employee_id, phone),
           vehicle:assets(id, name, license_plate)
         `)
         .eq('shift_id', shiftId)
