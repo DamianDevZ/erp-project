@@ -75,7 +75,7 @@ export function RiderDashboard({ employeeId }: { employeeId?: string }) {
       } else if (clientFilter !== null) {
         // Empty array means no clients selected - show nothing
         setOrders([]);
-        setStats({ todayOrders: 0, weekOrders: 0, monthOrders: 0, monthEarnings: 0 });
+        setStats({ todayOrders: 0, weekOrders: 0, monthEarnings: 0 });
         setShifts([]);
         setDocuments([]);
         setLoading(false);
