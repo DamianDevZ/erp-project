@@ -8,7 +8,6 @@ import { createClient } from '@/lib/supabase/client';
 interface InactiveEmployee {
   id: string;
   full_name: string;
-  reason: string;
   sub: string;
   badge: 'on_leave' | 'pending' | 'inactive';
 }
@@ -20,14 +19,12 @@ interface StatusCounts {
   pending: number;
 }
 
-/**
- * Employee Status Widget
- * Shows active vs inactive employees with reason for inactivity.
- * Used on the admin dashboard.
- */
+type ExpandedTile = 'on_leave' | 'pending' | 'inactive' | null;
+
 export function EmployeeStatusWidget() {
   const [counts, setCounts] = useState<StatusCounts>({ active: 0, on_leave: 0, inactive: 0, pending: 0 });
-  const [inactive, setInactive] = useState<InactiveEmployee[]>([]);
+  const [employees, setEmployees] = useState<InactiveEmployee[]>([]);
+  const [expanded, setExpanded] = useState<ExpandedTile>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,19 +45,18 @@ export function EmployeeStatusWidget() {
           .gte('end_date', today),
       ]);
 
-      const employees = employeesResult.data || [];
+      const emps = employeesResult.data || [];
       const activeLeaves = leavesResult.data || [];
 
-      // Map employee_id → leave info
       const leaveMap = new Map<string, { leave_type: string; reason: string; end_date: string }>();
       for (const l of activeLeaves) {
         leaveMap.set(l.employee_id, { leave_type: l.leave_type, reason: l.reason, end_date: l.end_date });
       }
 
       const countMap: StatusCounts = { active: 0, on_leave: 0, inactive: 0, pending: 0 };
-      const inactiveList: InactiveEmployee[] = [];
+      const list: InactiveEmployee[] = [];
 
-      for (const emp of employees) {
+      for (const emp of emps) {
         if (emp.status === 'active') {
           const leave = leaveMap.get(emp.id);
           if (leave) {
@@ -68,13 +64,12 @@ export function EmployeeStatusWidget() {
             const leaveLabel = leave.leave_type
               ? leave.leave_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
               : 'Leave';
-            inactiveList.push({
+            list.push({
               id: emp.id,
               full_name: emp.full_name,
-              reason: leaveLabel,
               sub: leave.reason
-                ? `${leave.reason} — returns ${new Date(leave.end_date).toLocaleDateString()}`
-                : `Returns ${new Date(leave.end_date).toLocaleDateString()}`,
+                ? `${leaveLabel} — ${leave.reason} (returns ${new Date(leave.end_date).toLocaleDateString()})`
+                : `${leaveLabel} — returns ${new Date(leave.end_date).toLocaleDateString()}`,
               badge: 'on_leave',
             });
           } else {
@@ -84,21 +79,18 @@ export function EmployeeStatusWidget() {
           countMap.pending++;
           const step = emp.onboarding_step
             ? emp.onboarding_step.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
-            : 'Pending Onboarding';
-          inactiveList.push({
+            : 'Pending onboarding';
+          list.push({
             id: emp.id,
             full_name: emp.full_name,
-            reason: 'Pending Onboarding',
             sub: emp.notes || step,
             badge: 'pending',
           });
         } else {
-          // past / inactive
           countMap.inactive++;
-          inactiveList.push({
+          list.push({
             id: emp.id,
             full_name: emp.full_name,
-            reason: 'Inactive',
             sub: emp.notes
               ? emp.notes
               : emp.termination_date
@@ -110,7 +102,7 @@ export function EmployeeStatusWidget() {
       }
 
       setCounts(countMap);
-      setInactive(inactiveList);
+      setEmployees(list);
       setLoading(false);
     }
 
@@ -132,96 +124,112 @@ export function EmployeeStatusWidget() {
 
   const totalAll = counts.active + counts.on_leave + counts.inactive + counts.pending;
 
-  const badgeStyles: Record<InactiveEmployee['badge'], string> = {
-    on_leave: 'bg-warning/10 text-warning',
-    pending: 'bg-primary/10 text-primary',
-    inactive: 'bg-error/10 text-error',
-  };
+  function toggle(tile: ExpandedTile) {
+    setExpanded(prev => (prev === tile ? null : tile));
+  }
 
-  const badgeLabels: Record<InactiveEmployee['badge'], string> = {
-    on_leave: 'On Leave',
-    pending: 'Pending',
-    inactive: 'Inactive',
-  };
+  const visibleEmployees = expanded ? employees.filter(e => e.badge === expanded) : [];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Employee Status</CardTitle>
+        <CardTitle>Employee Status <span className="text-sm font-normal text-muted ml-1">({totalAll} total)</span></CardTitle>
         <Link href="/dashboard/employees" className="text-xs text-primary hover:underline">
           View all →
         </Link>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Summary tiles */}
+      <CardContent>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatusTile label="Active" count={counts.active} total={totalAll} color="success" />
-          <StatusTile label="On Leave" count={counts.on_leave} total={totalAll} color="warning" />
-          <StatusTile label="Pending" count={counts.pending} total={totalAll} color="default" />
-          <StatusTile label="Inactive" count={counts.inactive} total={totalAll} color="error" />
+          {/* Active — no dropdown */}
+          <div className="rounded-lg border border-border p-3">
+            <p className="text-2xl font-bold text-success">{counts.active}</p>
+            <p className="text-xs text-muted mt-0.5">Active</p>
+            <p className="text-xs text-muted">{totalAll > 0 ? Math.round((counts.active / totalAll) * 100) : 0}%</p>
+          </div>
+
+          {/* On Leave — clickable */}
+          <ExpandableTile
+            label="On Leave"
+            count={counts.on_leave}
+            total={totalAll}
+            color="warning"
+            isOpen={expanded === 'on_leave'}
+            onClick={() => toggle('on_leave')}
+          />
+
+          {/* Pending — clickable */}
+          <ExpandableTile
+            label="Pending"
+            count={counts.pending}
+            total={totalAll}
+            color="default"
+            isOpen={expanded === 'pending'}
+            onClick={() => toggle('pending')}
+          />
+
+          {/* Inactive — clickable */}
+          <ExpandableTile
+            label="Inactive"
+            count={counts.inactive}
+            total={totalAll}
+            color="error"
+            isOpen={expanded === 'inactive'}
+            onClick={() => toggle('inactive')}
+          />
         </div>
 
-        {/* All non-active employees with reason */}
-        {inactive.length > 0 ? (
-          <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-              Not Currently Active ({inactive.length})
-            </p>
-            <div className="space-y-2">
-              {inactive.map((emp) => (
-                <div
-                  key={emp.id}
-                  className="flex items-start justify-between rounded-lg border border-border px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/dashboard/employees/${emp.id}`}
-                      className="text-sm font-medium text-heading hover:text-primary"
-                    >
-                      {emp.full_name}
-                    </Link>
-                    <p className="text-xs text-muted truncate">{emp.sub}</p>
-                  </div>
-                  <span className={`ml-2 shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyles[emp.badge]}`}>
-                    {badgeLabels[emp.badge]}
-                  </span>
+        {/* Inline dropdown */}
+        {expanded && visibleEmployees.length > 0 && (
+          <div className="mt-3 rounded-lg border border-border bg-background divide-y divide-border">
+            {visibleEmployees.map((emp) => (
+              <div key={emp.id} className="flex items-start justify-between px-3 py-2.5">
+                <div className="min-w-0">
+                  <Link
+                    href={`/dashboard/employees/${emp.id}`}
+                    className="text-sm font-medium text-heading hover:text-primary"
+                  >
+                    {emp.full_name}
+                  </Link>
+                  <p className="text-xs text-muted">{emp.sub}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <p className="text-sm text-muted text-center py-2">All employees are currently active.</p>
+        )}
+
+        {expanded && visibleEmployees.length === 0 && (
+          <p className="mt-3 text-sm text-muted text-center py-2">None.</p>
         )}
       </CardContent>
+
     </Card>
   );
 }
 
-function StatusTile({
-  label,
-  count,
-  total,
-  color,
+function ExpandableTile({
+  label, count, total, color, isOpen, onClick,
 }: {
   label: string;
   count: number;
   total: number;
-  color: 'success' | 'warning' | 'error' | 'default';
+  color: 'warning' | 'error' | 'default';
+  isOpen: boolean;
+  onClick: () => void;
 }) {
-  const colorMap = {
-    success: 'text-success',
-    warning: 'text-warning',
-    error: 'text-error',
-    default: 'text-muted',
-  };
-
+  const colorMap = { warning: 'text-warning', error: 'text-error', default: 'text-muted' };
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
 
   return (
-    <div className="rounded-lg border border-border p-3">
+    <button
+      onClick={onClick}
+      className={`rounded-lg border p-3 text-left w-full transition-colors hover:bg-hover ${isOpen ? 'border-primary bg-hover' : 'border-border'}`}
+    >
       <p className={`text-2xl font-bold ${colorMap[color]}`}>{count}</p>
-      <p className="text-xs text-muted">{label}</p>
+      <div className="flex items-center justify-between mt-0.5">
+        <p className="text-xs text-muted">{label}</p>
+        <span className="text-xs text-muted">{isOpen ? '?' : '?'}</span>
+      </div>
       <p className="text-xs text-muted">{pct}%</p>
-    </div>
+    </button>
   );
 }
