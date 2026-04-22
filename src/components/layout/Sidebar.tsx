@@ -205,8 +205,21 @@ export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
   return (
     <aside className={`flex h-full flex-col border-r border-border bg-card transition-all duration-200 ${isCollapsed ? 'w-16' : 'w-64'}`}>
       {/* Logo + collapse toggle */}
-      <div className={`flex h-16 items-center border-b border-border ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
-        {!isCollapsed && (
+      {isCollapsed ? (
+        <div className="flex h-16 flex-col items-center justify-center gap-1 border-b border-border">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">
+            {organizationName?.charAt(0).toUpperCase() || 'E'}
+          </div>
+          <button
+            onClick={toggleCollapse}
+            title="Expand sidebar"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-heading transition-colors"
+          >
+            <ChevronDoubleLeftIcon className="h-3 w-3 rotate-180" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex h-16 items-center justify-between border-b border-border px-4">
           <div className="flex items-center min-w-0 flex-1 mr-2">
             {organizationLogo ? (
               <Image
@@ -222,20 +235,15 @@ export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
               </div>
             )}
           </div>
-        )}
-        {isCollapsed && (
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold text-base">
-            {organizationName?.charAt(0).toUpperCase() || 'E'}
-          </div>
-        )}
-        <button
-          onClick={toggleCollapse}
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-heading transition-colors ${isCollapsed ? 'mt-2 absolute top-4 right-[-16px] z-10 bg-card border border-border shadow-sm' : ''}`}
-        >
-          <ChevronDoubleLeftIcon className={`h-4 w-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
+          <button
+            onClick={toggleCollapse}
+            title="Collapse sidebar"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-heading transition-colors"
+          >
+            <ChevronDoubleLeftIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
