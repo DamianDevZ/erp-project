@@ -20,6 +20,11 @@ export function FinanceDashboard() {
     codCollected: 0,
     codPending: 0,
     payrollPending: 0,
+    // Cost section
+    totalPayrollCost: 0,
+    totalDeductions: 0,
+    grossProfit: 0,
+    payrollBatchCount: 0,
   });
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [payrollBatches, setPayrollBatches] = useState<any[]>([]);
@@ -42,6 +47,10 @@ export function FinanceDashboard() {
           codCollected: 0,
           codPending: 0,
           payrollPending: 0,
+          totalPayrollCost: 0,
+          totalDeductions: 0,
+          grossProfit: 0,
+          payrollBatchCount: 0,
         });
         setRecentInvoices([]);
         setPayrollBatches([]);
@@ -94,6 +103,12 @@ export function FinanceDashboard() {
 
       const payrollPending = payroll.filter(p => p.status === 'pending' || p.status === 'processing').length;
 
+      // Cost calculations
+      const totalPayrollCost = payroll
+        .filter(p => p.status === 'completed')
+        .reduce((sum, p) => sum + (p.total_net || 0), 0);
+      const grossProfit = totalRevenue - totalPayrollCost;
+
       setStats({
         totalRevenue,
         pendingInvoices: pendingInvoices.length,
@@ -102,6 +117,10 @@ export function FinanceDashboard() {
         codCollected,
         codPending,
         payrollPending,
+        totalPayrollCost,
+        totalDeductions: 0, // extend when deductions table is queried
+        grossProfit,
+        payrollBatchCount: payroll.length,
       });
       setRecentInvoices(invoices.slice(0, 8));
       setPayrollBatches(payroll);
@@ -185,6 +204,51 @@ export function FinanceDashboard() {
             <p className="text-sm text-muted">COD Pending</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Cost Overview */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Cost Overview</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold text-error">{formatCurrency(stats.totalPayrollCost)}</div>
+              <p className="text-sm text-muted">Payroll Cost (Paid)</p>
+              <p className="text-xs text-muted mt-1">{stats.payrollBatchCount} batches</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className={`text-2xl font-bold ${stats.grossProfit >= 0 ? 'text-success' : 'text-error'}`}>
+                {formatCurrency(stats.grossProfit)}
+              </div>
+              <p className="text-sm text-muted">Gross Profit</p>
+              <p className="text-xs text-muted mt-1">Revenue − Payroll</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold text-warning">{formatCurrency(stats.codPending)}</div>
+              <p className="text-sm text-muted">Outstanding CODs</p>
+              <Link href="/dashboard/finance" className="text-xs text-primary hover:underline mt-1 block">
+                View COD tracking →
+              </Link>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold text-heading">
+                {stats.totalRevenue > 0
+                  ? `${Math.round((stats.grossProfit / stats.totalRevenue) * 100)}%`
+                  : '—'}
+              </div>
+              <p className="text-sm text-muted">Gross Margin</p>
+              <Link href="/dashboard/reports" className="text-xs text-primary hover:underline mt-1 block">
+                Full report →
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

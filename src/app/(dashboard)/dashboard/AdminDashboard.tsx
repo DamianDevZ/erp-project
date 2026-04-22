@@ -9,6 +9,7 @@ import {
   ComplianceAlertsWidget,
   RecentActivityWidget,
 } from '@/features/dashboard';
+import { EmployeeStatusWidget } from './EmployeeStatusWidget';
 
 interface AdminDashboardProps {
   complianceAlerts?: Array<{
@@ -48,6 +49,9 @@ export function AdminDashboard({ complianceAlerts = [], activities = [] }: Admin
 
       {/* Key metrics - client component with real-time data */}
       <DashboardMetricsGrid />
+
+      {/* Employee status overview */}
+      <EmployeeStatusWidget />
 
       {/* Main content grid */}
       <div className="grid gap-6 lg:grid-cols-2">

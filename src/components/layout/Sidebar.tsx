@@ -34,7 +34,8 @@ const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
         { name: 'Shifts', href: '/dashboard/shifts', icon: ClockIcon },
         { name: 'Referrals', href: '/dashboard/referrals', icon: UserGroupIcon },
         { name: 'Documents', href: '/dashboard/documents', icon: FolderIcon },
-        { name: 'Discipline', href: '/dashboard/performance', icon: ShieldIcon },
+        { name: 'Performance Management', href: '/dashboard/performance', icon: ShieldIcon },
+        { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
         { name: 'Training', href: '/dashboard/training', icon: AcademicCapIcon },
       ],
     },
@@ -83,7 +84,8 @@ const roleNavigation: Record<DevRole, (NavItem | NavSection)[]> = {
     { name: 'Shifts', href: '/dashboard/shifts', icon: ClockIcon },
     { name: 'Referrals', href: '/dashboard/referrals', icon: UserGroupIcon },
     { name: 'Documents', href: '/dashboard/documents', icon: FolderIcon },
-    { name: 'Discipline', href: '/dashboard/performance', icon: ShieldIcon },
+    { name: 'Performance Management', href: '/dashboard/performance', icon: ShieldIcon },
+    { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
     { name: 'Training', href: '/dashboard/training', icon: AcademicCapIcon },
   ],
   operations: [
@@ -121,7 +123,7 @@ const defaultNavigation: NavItem[] = [
   { name: 'Orders', href: '/dashboard/orders', icon: ClipboardListIcon },
   { name: 'Documents', href: '/dashboard/documents', icon: FolderIcon },
   { name: 'Coaching', href: '/dashboard/coaching', icon: ClipboardIcon },
-  { name: 'Discipline', href: '/dashboard/performance', icon: ShieldIcon },
+  { name: 'Performance Management', href: '/dashboard/performance', icon: ShieldIcon },
   { name: 'Training', href: '/dashboard/training', icon: AcademicCapIcon },
   { name: 'Assets', href: '/dashboard/assets', icon: TruckIcon },
   { name: 'Locations', href: '/dashboard/locations', icon: MapPinIcon },
@@ -143,11 +145,13 @@ function isNavSection(item: NavItem | NavSection): item is NavSection {
  * Sidebar navigation component.
  * Displays the main navigation for the dashboard.
  * Supports role-based navigation with expandable sections for administrators.
+ * Supports collapse to icon-only mode (persisted in localStorage).
  */
 export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
   const pathname = usePathname();
   const role = useDevRole();
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Enable dev tools in development or when env var is set
   const devToolsEnabled = process.env.NODE_ENV === 'development' || 
@@ -157,6 +161,12 @@ export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
   const navigation = devToolsEnabled && role
     ? roleNavigation[role] || defaultNavigation
     : defaultNavigation;
+
+  // Load collapse state from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebar-collapsed');
+    if (stored === 'true') setIsCollapsed(true);
+  }, []);
 
   // Auto-expand sections based on current path
   useEffect(() => {
@@ -186,34 +196,92 @@ export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
     );
   };
 
+  const toggleCollapse = () => {
+    const next = !isCollapsed;
+    setIsCollapsed(next);
+    localStorage.setItem('sidebar-collapsed', next.toString());
+  };
+
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-border bg-card">
-      {/* Logo */}
-      <div className="flex h-24 items-center justify-start border-b border-border p-4">
-        {organizationLogo ? (
-          <Image
-            src={organizationLogo}
-            alt={organizationName || 'Logo'}
-            width={160}
-            height={64}
-            className="max-h-16 w-auto max-w-full object-contain"
-          />
-        ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-white font-bold text-xl">
+    <aside className={`flex h-full flex-col border-r border-border bg-card transition-all duration-200 ${isCollapsed ? 'w-16' : 'w-64'}`}>
+      {/* Logo + collapse toggle */}
+      <div className={`flex h-16 items-center border-b border-border ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
+        {!isCollapsed && (
+          <div className="flex items-center min-w-0 flex-1 mr-2">
+            {organizationLogo ? (
+              <Image
+                src={organizationLogo}
+                alt={organizationName || 'Logo'}
+                width={120}
+                height={40}
+                className="max-h-10 w-auto max-w-full object-contain"
+              />
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white font-bold text-base">
+                {organizationName?.charAt(0).toUpperCase() || 'E'}
+              </div>
+            )}
+          </div>
+        )}
+        {isCollapsed && (
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold text-base">
             {organizationName?.charAt(0).toUpperCase() || 'E'}
           </div>
         )}
+        <button
+          onClick={toggleCollapse}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-heading transition-colors ${isCollapsed ? 'mt-2 absolute top-4 right-[-16px] z-10 bg-card border border-border shadow-sm' : ''}`}
+        >
+          <ChevronDoubleLeftIcon className={`h-4 w-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} />
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+      <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
         {navigation.map((item) => {
           if (isNavSection(item)) {
             const isExpanded = expandedSections.includes(item.name);
             const hasActiveItem = item.items.some(
               navItem => pathname === navItem.href || pathname.startsWith(navItem.href + '/')
             );
-            
+
+            if (isCollapsed) {
+              // Collapsed mode: show section icon only, still toggleable
+              return (
+                <div key={item.name}>
+                  <button
+                    onClick={() => toggleSection(item.name)}
+                    title={item.name}
+                    className={`w-full flex items-center justify-center rounded-lg p-2 transition-colors ${
+                      hasActiveItem ? 'bg-primary-light text-primary' : 'text-body hover:bg-hover hover:text-heading'
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5" />
+                  </button>
+                  {isExpanded && (
+                    <div className="mt-1 space-y-1">
+                      {item.items.map((subItem) => {
+                        const isActive = pathname === subItem.href || pathname.startsWith(subItem.href + '/');
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            title={subItem.name}
+                            className={`flex items-center justify-center rounded-lg p-2 text-sm transition-colors ${
+                              isActive ? 'bg-primary-light text-primary' : 'text-body hover:bg-hover hover:text-heading'
+                            }`}
+                          >
+                            <subItem.icon className="h-4 w-4" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <div key={item.name}>
                 <button
@@ -265,6 +333,22 @@ export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
           const isActive = item.href === '/dashboard' 
             ? pathname === '/dashboard'
             : pathname === item.href || pathname.startsWith(item.href + '/');
+
+          if (isCollapsed) {
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={item.name}
+                className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                  isActive ? 'bg-primary-light text-primary' : 'text-body hover:bg-hover hover:text-heading'
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+              </Link>
+            );
+          }
+
           return (
             <Link
               key={item.name}
@@ -285,13 +369,16 @@ export function Sidebar({ organizationName, organizationLogo }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border p-2">
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-body hover:bg-hover"
+          title="Settings"
+          className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium text-body hover:bg-hover ${
+            isCollapsed ? 'justify-center px-2' : 'gap-3'
+          }`}
         >
-          <SettingsIcon className="h-5 w-5" />
-          Settings
+          <SettingsIcon className="h-5 w-5 shrink-0" />
+          {!isCollapsed && 'Settings'}
         </Link>
       </div>
     </aside>
@@ -401,6 +488,14 @@ function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+function ChevronDoubleLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
     </svg>
   );
 }
