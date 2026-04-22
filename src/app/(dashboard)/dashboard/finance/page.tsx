@@ -124,7 +124,7 @@ export default async function FinancePage() {
                         {order.external_order_id || order.id}
                       </Link>
                       <p className="text-sm text-muted">
-                        {(order.employee as { full_name: string } | null)?.full_name} • {(order.client as { name: string } | null)?.name}
+                        {(order.employee as unknown as { full_name: string } | null)?.full_name} • {(order.client as unknown as { name: string } | null)?.name}
                       </p>
                     </div>
                     <div className="text-right">
@@ -165,7 +165,7 @@ export default async function FinancePage() {
                         {invoice.invoice_number}
                       </Link>
                       <p className="text-sm text-muted">
-                        {(invoice.client as { name: string } | null)?.name || invoice.title}
+                        {(invoice.client as unknown as { name: string } | null)?.name || invoice.title}
                       </p>
                     </div>
                     <div className="text-right">

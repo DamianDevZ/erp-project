@@ -69,7 +69,7 @@ export function OrdersList() {
       sortable: true,
       render: (order) => (
         <span className="text-heading font-medium">
-          {(order.client as { name: string } | null)?.name || 'â€”'}
+          {(order.client as unknown as { name: string } | null)?.name || '—'}
         </span>
       ),
     },
@@ -78,7 +78,7 @@ export function OrdersList() {
       header: 'Rider',
       sortable: true,
       render: (order) => (
-        (order.employee as { full_name: string } | null)?.full_name || (
+        (order.employee as unknown as { full_name: string } | null)?.full_name || (
           <span className="text-muted">Unassigned</span>
         )
       ),

@@ -146,7 +146,7 @@ export default async function EmployeeDetailPage({ params }: Props) {
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {activeAssignments.map((assignment) => (
                     <Badge key={assignment.id} variant="default">
-                      {(assignment.client as { name: string } | null)?.name || 'Unknown'}
+                      {(assignment.client as unknown as { name: string } | null)?.name || 'Unknown'}
                     </Badge>
                   ))}
                 </div>
