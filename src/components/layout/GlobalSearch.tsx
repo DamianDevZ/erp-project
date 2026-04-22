@@ -108,7 +108,7 @@ export function GlobalSearch() {
             id: order.id,
             type: 'order',
             title: order.order_number,
-            subtitle: `${order.client?.name || 'Unknown'} • ${order.status}`,
+            subtitle: `${(order.client as unknown as { name: string } | null)?.name || 'Unknown'} • ${order.status}`,
             href: `/dashboard/orders/${order.id}`,
           });
         });
