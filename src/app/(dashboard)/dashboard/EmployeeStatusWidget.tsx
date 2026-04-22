@@ -5,13 +5,12 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 
-interface StatusEmployee {
+interface InactiveEmployee {
   id: string;
   full_name: string;
-  status: 'active' | 'pending' | 'past';
-  leave_reason?: string;
-  leave_type?: string;
-  leave_end?: string;
+  reason: string;
+  sub: string;
+  badge: 'on_leave' | 'pending' | 'inactive';
 }
 
 interface StatusCounts {
@@ -28,7 +27,7 @@ interface StatusCounts {
  */
 export function EmployeeStatusWidget() {
   const [counts, setCounts] = useState<StatusCounts>({ active: 0, on_leave: 0, inactive: 0, pending: 0 });
-  const [onLeave, setOnLeave] = useState<StatusEmployee[]>([]);
+  const [inactive, setInactive] = useState<InactiveEmployee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,11 +38,11 @@ export function EmployeeStatusWidget() {
       const [employeesResult, leavesResult] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, full_name, status')
+          .select('id, full_name, status, notes, termination_date, onboarding_step')
           .order('full_name'),
         supabase
           .from('leaves')
-          .select('employee_id, leave_type, reason, end_date, employee:employees(full_name)')
+          .select('employee_id, leave_type, reason, end_date')
           .eq('status', 'approved')
           .lte('start_date', today)
           .gte('end_date', today),
@@ -52,37 +51,66 @@ export function EmployeeStatusWidget() {
       const employees = employeesResult.data || [];
       const activeLeaves = leavesResult.data || [];
 
-      // Build set of employee IDs currently on approved leave
-      const onLeaveIds = new Set(activeLeaves.map(l => l.employee_id));
+      // Map employee_id → leave info
+      const leaveMap = new Map<string, { leave_type: string; reason: string; end_date: string }>();
+      for (const l of activeLeaves) {
+        leaveMap.set(l.employee_id, { leave_type: l.leave_type, reason: l.reason, end_date: l.end_date });
+      }
 
       const countMap: StatusCounts = { active: 0, on_leave: 0, inactive: 0, pending: 0 };
+      const inactiveList: InactiveEmployee[] = [];
+
       for (const emp of employees) {
         if (emp.status === 'active') {
-          if (onLeaveIds.has(emp.id)) {
+          const leave = leaveMap.get(emp.id);
+          if (leave) {
             countMap.on_leave++;
+            const leaveLabel = leave.leave_type
+              ? leave.leave_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+              : 'Leave';
+            inactiveList.push({
+              id: emp.id,
+              full_name: emp.full_name,
+              reason: leaveLabel,
+              sub: leave.reason
+                ? `${leave.reason} — returns ${new Date(leave.end_date).toLocaleDateString()}`
+                : `Returns ${new Date(leave.end_date).toLocaleDateString()}`,
+              badge: 'on_leave',
+            });
           } else {
             countMap.active++;
           }
         } else if (emp.status === 'pending') {
           countMap.pending++;
+          const step = emp.onboarding_step
+            ? emp.onboarding_step.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+            : 'Pending Onboarding';
+          inactiveList.push({
+            id: emp.id,
+            full_name: emp.full_name,
+            reason: 'Pending Onboarding',
+            sub: emp.notes || step,
+            badge: 'pending',
+          });
         } else {
+          // past / inactive
           countMap.inactive++;
+          inactiveList.push({
+            id: emp.id,
+            full_name: emp.full_name,
+            reason: 'Inactive',
+            sub: emp.notes
+              ? emp.notes
+              : emp.termination_date
+              ? `Left ${new Date(emp.termination_date).toLocaleDateString()}`
+              : 'No longer active',
+            badge: 'inactive',
+          });
         }
       }
 
-      const leaveList: StatusEmployee[] = activeLeaves.map(l => ({
-        id: l.employee_id,
-        full_name: (l.employee as unknown as { full_name: string } | null)?.full_name ?? 'Unknown',
-        status: 'active' as const,
-        leave_reason: l.reason || undefined,
-        leave_type: l.leave_type
-          ? l.leave_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
-          : undefined,
-        leave_end: l.end_date,
-      }));
-
       setCounts(countMap);
-      setOnLeave(leaveList);
+      setInactive(inactiveList);
       setLoading(false);
     }
 
@@ -102,90 +130,67 @@ export function EmployeeStatusWidget() {
     );
   }
 
-  const totalActive = counts.active + counts.on_leave;
-  const totalAll = totalActive + counts.inactive + counts.pending;
+  const totalAll = counts.active + counts.on_leave + counts.inactive + counts.pending;
+
+  const badgeStyles: Record<InactiveEmployee['badge'], string> = {
+    on_leave: 'bg-warning/10 text-warning',
+    pending: 'bg-primary/10 text-primary',
+    inactive: 'bg-error/10 text-error',
+  };
+
+  const badgeLabels: Record<InactiveEmployee['badge'], string> = {
+    on_leave: 'On Leave',
+    pending: 'Pending',
+    inactive: 'Inactive',
+  };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Employee Status</CardTitle>
-        <Link
-          href="/dashboard/employees"
-          className="text-xs text-primary hover:underline"
-        >
+        <Link href="/dashboard/employees" className="text-xs text-primary hover:underline">
           View all →
         </Link>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Summary bars */}
+        {/* Summary tiles */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatusTile
-            label="Active"
-            count={counts.active}
-            total={totalAll}
-            color="success"
-          />
-          <StatusTile
-            label="On Leave"
-            count={counts.on_leave}
-            total={totalAll}
-            color="warning"
-          />
-          <StatusTile
-            label="Pending"
-            count={counts.pending}
-            total={totalAll}
-            color="default"
-          />
-          <StatusTile
-            label="Inactive"
-            count={counts.inactive}
-            total={totalAll}
-            color="error"
-          />
+          <StatusTile label="Active" count={counts.active} total={totalAll} color="success" />
+          <StatusTile label="On Leave" count={counts.on_leave} total={totalAll} color="warning" />
+          <StatusTile label="Pending" count={counts.pending} total={totalAll} color="default" />
+          <StatusTile label="Inactive" count={counts.inactive} total={totalAll} color="error" />
         </div>
 
-        {/* Employees currently on leave */}
-        {onLeave.length > 0 && (
+        {/* All non-active employees with reason */}
+        {inactive.length > 0 ? (
           <div>
             <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-              Currently on leave ({onLeave.length})
+              Not Currently Active ({inactive.length})
             </p>
             <div className="space-y-2">
-              {onLeave.map((emp) => (
+              {inactive.map((emp) => (
                 <div
                   key={emp.id}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+                  className="flex items-start justify-between rounded-lg border border-border px-3 py-2"
                 >
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <Link
                       href={`/dashboard/employees/${emp.id}`}
                       className="text-sm font-medium text-heading hover:text-primary"
                     >
                       {emp.full_name}
                     </Link>
-                    {emp.leave_type && (
-                      <p className="text-xs text-muted">{emp.leave_type}</p>
-                    )}
+                    <p className="text-xs text-muted truncate">{emp.sub}</p>
                   </div>
-                  <div className="text-right">
-                    <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                      On Leave
-                    </span>
-                    {emp.leave_end && (
-                      <p className="text-xs text-muted mt-0.5">
-                        Until {new Date(emp.leave_end).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
+                  <span className={`ml-2 shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyles[emp.badge]}`}>
+                    {badgeLabels[emp.badge]}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
-        )}
-
-        {onLeave.length === 0 && (
-          <p className="text-sm text-muted text-center py-2">No employees currently on leave.</p>
+        ) : (
+          <p className="text-sm text-muted text-center py-2">All employees are currently active.</p>
         )}
       </CardContent>
     </Card>
