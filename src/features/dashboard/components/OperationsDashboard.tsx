@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { useClientContext } from '@/contexts';
@@ -57,6 +57,7 @@ export function OperationsDashboard() {
   const [attendanceIssues, setAttendanceIssues] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [platformBreakdown, setPlatformBreakdown] = useState<{ name: string; orders: number; completed: number }[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -191,6 +192,15 @@ export function OperationsDashboard() {
         openCods,
         openCodAmount,
       });
+      // Platform breakdown from all today's orders
+      const platformMap: Record<string, { name: string; orders: number; completed: number }> = {};
+      orders.forEach((o: any) => {
+        const name = (o.client as any)?.name ?? 'Unknown';
+        if (!platformMap[name]) platformMap[name] = { name, orders: 0, completed: 0 };
+        platformMap[name].orders++;
+        if (o.status === 'completed') platformMap[name].completed++;
+      });
+      setPlatformBreakdown(Object.values(platformMap).sort((a, b) => b.orders - a.orders).slice(0, 6));
       setRecentOrders(orders.slice(0, 10));
       setActiveShifts(shifts);
       setFleetBreakdown(fleet);
@@ -224,8 +234,14 @@ export function OperationsDashboard() {
     { name: 'Assigned', value: stats.activeVehicles, color: '#22c55e' },
     { name: 'Available', value: stats.idleVehicles, color: '#3b82f6' },
     { name: 'Maintenance', value: stats.maintenanceVehicles, color: '#ef4444' },
-    { name: 'Off Road', value: stats.totalVehicles - stats.activeVehicles - stats.idleVehicles - stats.maintenanceVehicles, color: '#94a3b8' },
+    { name: 'Off Road', value: Math.max(0, stats.totalVehicles - stats.activeVehicles - stats.idleVehicles - stats.maintenanceVehicles), color: '#94a3b8' },
   ].filter(d => d.value > 0);
+
+  const attendanceBarData = [
+    { name: 'On Time', value: Math.max(0, stats.activeRiders - stats.lateLogins), color: '#22c55e' },
+    { name: 'Late', value: stats.lateLogins, color: '#f59e0b' },
+    { name: 'No Show', value: stats.noShows, color: '#ef4444' },
+  ];
 
   return (
     <div className="space-y-6">
@@ -262,113 +278,133 @@ export function OperationsDashboard() {
         <KpiCard label="COD Outstanding" value={`${stats.openCodAmount.toFixed(3)} BHD`} sub={`${stats.openCods} unreturned`} color={stats.openCods > 0 ? 'error' : 'success'} />
       </div>
 
-      {/* Charts row */}
+      {/* Charts row: order status donut + orders by platform bar */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Order status donut */}
         <Card>
-          <CardHeader>
-            <CardTitle>Order Status Breakdown</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Order Status Breakdown</CardTitle></CardHeader>
           <CardContent>
             {stats.todayOrders > 0 ? (
-              <div className="flex items-center gap-6">
-                <div className="relative h-44 w-44 shrink-0">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative h-52 w-52">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={orderChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
-                        {orderChartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
+                      <Pie data={orderChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={96} dataKey="value" stroke="transparent" paddingAngle={2}>
+                        {orderChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(v, n) => [v, n]} />
+                      <Tooltip formatter={(v, n) => [`${v} orders`, n]} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-heading">{stats.todayOrders}</span>
-                    <span className="text-xs text-muted">total</span>
+                    <span className="text-3xl font-bold text-heading">{stats.todayOrders}</span>
+                    <span className="text-xs text-muted">total today</span>
                   </div>
                 </div>
-                <div className="space-y-2 flex-1">
+                <div className="w-full grid grid-cols-2 gap-2">
                   {orderChartData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span className="text-sm text-body">{d.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.todayOrders) * 100}%`, background: d.color }} />
-                        </div>
-                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                    <div key={d.name} className="flex items-center gap-2 p-2 rounded-lg bg-hover">
+                      <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                      <div>
+                        <p className="text-xs text-muted">{d.name}</p>
+                        <p className="text-sm font-bold text-heading">{d.value}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="text-muted text-center py-10">No orders today.</p>
+              <p className="text-muted text-center py-16">No orders today.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Fleet status donut */}
         <Card>
-          <CardHeader>
-            <CardTitle>Fleet Status</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Orders by Platform</CardTitle></CardHeader>
           <CardContent>
-            {stats.totalVehicles > 0 ? (
-              <div className="flex items-center gap-6">
-                <div className="relative h-44 w-44 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={fleetChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
-                        {fleetChartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v, n) => [v, n]} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-heading">{stats.totalVehicles}</span>
-                    <span className="text-xs text-muted">vehicles</span>
-                  </div>
-                </div>
-                <div className="space-y-2 flex-1">
-                  {fleetChartData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span className="text-sm text-body">{d.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.totalVehicles) * 100}%`, background: d.color }} />
-                        </div>
-                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {platformBreakdown.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={platformBreakdown} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} width={90} />
+                    <Tooltip />
+                    <Bar dataKey="orders" name="Total" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="completed" name="Completed" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-muted text-center py-10">No vehicles registered.</p>
+              <p className="text-muted text-center py-16">No order data.</p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Attendance row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <AttendanceCard label="No Shows" value={stats.noShows} total={stats.activeRiders + stats.noShows} color="#ef4444" />
-        <AttendanceCard label="Late Logins" value={stats.lateLogins} total={stats.activeRiders} color="#f59e0b" />
-        <AttendanceCard label="On Time" value={stats.activeRiders - stats.lateLogins} total={stats.activeRiders} color="#22c55e" />
-        <div className="rounded-lg border border-border bg-card p-4 flex flex-col justify-center">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Pending Orders</p>
-          <p className="text-3xl font-bold text-warning">{stats.pendingOrders}</p>
-          <p className="text-xs text-muted mt-1">awaiting delivery</p>
-        </div>
+      {/* Fleet + Attendance */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Fleet Status</CardTitle></CardHeader>
+          <CardContent>
+            {stats.totalVehicles > 0 ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative h-52 w-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={fleetChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={96} dataKey="value" stroke="transparent" paddingAngle={2}>
+                        {fleetChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-3xl font-bold text-heading">{stats.totalVehicles}</span>
+                    <span className="text-xs text-muted">vehicles</span>
+                  </div>
+                </div>
+                <div className="w-full grid grid-cols-2 gap-2">
+                  {fleetChartData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-2 p-2 rounded-lg bg-hover">
+                      <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                      <div>
+                        <p className="text-xs text-muted">{d.name}</p>
+                        <p className="text-sm font-bold text-heading">{d.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted text-center py-16">No vehicles registered.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Today&#39;s Attendance</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={attendanceBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#94a3b8' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="value" name="Riders" radius={[4, 4, 0, 0]}>
+                    {attendanceBarData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {attendanceBarData.map((d) => (
+                <div key={d.name} className="text-center p-3 rounded-lg bg-hover">
+                  <p className="text-2xl font-bold" style={{ color: d.color }}>{d.value}</p>
+                  <p className="text-xs text-muted mt-0.5">{d.name}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Attendance issues + CODs */}
@@ -475,6 +511,3 @@ function AttendanceCard({ label, value, total, color }: { label: string; value: 
     </div>
   );
 }
-
-
-      {/* — SECTION 1: Order KPIs — */}

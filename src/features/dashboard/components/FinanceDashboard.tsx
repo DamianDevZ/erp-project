@@ -162,6 +162,11 @@ export function FinanceDashboard() {
     { name: 'Gross Profit', value: stats.grossProfit },
   ];
 
+  const codBarData = [
+    { name: 'Collected', value: stats.codCollected, fill: '#22c55e' },
+    { name: 'Pending', value: stats.codPending, fill: '#f59e0b' },
+  ];
+
   const margin = stats.totalRevenue > 0 ? Math.round((stats.grossProfit / stats.totalRevenue) * 100) : 0;
 
   return (
@@ -215,16 +220,15 @@ export function FinanceDashboard() {
 
       {/* Charts row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Invoice status donut */}
         <Card>
           <CardHeader><CardTitle>Invoice Status</CardTitle></CardHeader>
           <CardContent>
             {invoiceChartData.length > 0 ? (
-              <div className="flex items-center gap-6">
-                <div className="relative h-44 w-44 shrink-0">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative h-52 w-52">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={invoiceChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
+                      <Pie data={invoiceChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={96} dataKey="value" stroke="transparent" paddingAngle={2}>
                         {invoiceChartData.map((entry, i) => (
                           <Cell key={i} fill={entry.color} />
                         ))}
@@ -233,45 +237,39 @@ export function FinanceDashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-heading">{recentInvoices.length}</span>
+                    <span className="text-3xl font-bold text-heading">{recentInvoices.length}</span>
                     <span className="text-xs text-muted">invoices</span>
                   </div>
                 </div>
-                <div className="space-y-3 flex-1">
+                <div className="w-full grid grid-cols-2 gap-2">
                   {invoiceChartData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span className="text-sm text-body">{d.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${(d.value / totalInvoiceCount) * 100}%`, background: d.color }} />
-                        </div>
-                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                    <div key={d.name} className="flex items-center gap-2 p-2 rounded-lg bg-hover">
+                      <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                      <div>
+                        <p className="text-xs text-muted">{d.name}</p>
+                        <p className="text-sm font-bold text-heading">{d.value}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="text-muted text-center py-10">No invoice data.</p>
+              <p className="text-muted text-center py-16">No invoice data.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Revenue vs Cost bar chart */}
         <Card>
           <CardHeader><CardTitle>Revenue vs Cost</CardTitle></CardHeader>
           <CardContent>
-            <div className="h-44">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueBarData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <BarChart data={revenueBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`} />
                   <Tooltip formatter={(v) => [formatCurrency(Number(v)), '']} />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={80}>
                     {revenueBarData.map((entry, i) => (
                       <Cell key={i} fill={i === 0 ? '#22c55e' : i === 1 ? '#ef4444' : entry.value >= 0 ? '#3b82f6' : '#f97316'} />
                     ))}
@@ -282,6 +280,36 @@ export function FinanceDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* COD Collections */}
+      <Card>
+        <CardHeader><CardTitle>COD Collections</CardTitle></CardHeader>
+        <CardContent>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={codBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#94a3b8' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`} />
+                <Tooltip formatter={(v) => [formatCurrency(Number(v)), '']} />
+                <Bar dataKey="value" name="Amount (BHD)" radius={[4, 4, 0, 0]} maxBarSize={120}>
+                  {codBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="p-3 rounded-lg bg-hover text-center">
+              <p className="text-xl font-bold text-success">{formatCurrency(stats.codCollected)}</p>
+              <p className="text-xs text-muted mt-0.5">Collected (30 days)</p>
+            </div>
+            <div className="p-3 rounded-lg bg-hover text-center">
+              <p className="text-xl font-bold text-warning">{formatCurrency(stats.codPending)}</p>
+              <p className="text-xs text-muted mt-0.5">Pending Remittance</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent invoices + Payroll */}
       <div className="grid gap-6 lg:grid-cols-2">

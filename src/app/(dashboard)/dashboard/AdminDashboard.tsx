@@ -10,6 +10,7 @@ import {
   RecentActivityWidget,
 } from '@/features/dashboard';
 import { EmployeeStatusWidget } from './EmployeeStatusWidget';
+import { AdminChartsSection } from './AdminChartsSection';
 
 interface AdminDashboardProps {
   complianceAlerts?: Array<{
@@ -47,8 +48,11 @@ export function AdminDashboard({ complianceAlerts = [], activities = [] }: Admin
         </div>
       </div>
 
-      {/* Key metrics - client component with real-time data */}
+      {/* Key metrics */}
       <DashboardMetricsGrid />
+
+      {/* Visual charts: trend, platforms, fleet, riders */}
+      <AdminChartsSection />
 
       {/* Employee status overview */}
       <EmployeeStatusWidget />

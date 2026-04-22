@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { useClientContext } from '@/contexts';
@@ -154,6 +154,18 @@ export function HRDashboard() {
     { name: 'Non-Compliant', value: stats.nonCompliant, color: '#ef4444' },
   ].filter(d => d.value > 0);
 
+  const staffBreakdown = [
+    { name: 'Active', count: stats.activeEmployees, fill: '#22c55e' },
+    { name: 'Onboarding', count: stats.pendingOnboarding, fill: '#3b82f6' },
+    { name: 'Inactive', count: Math.max(0, stats.totalEmployees - stats.activeEmployees - stats.pendingOnboarding), fill: '#94a3b8' },
+  ];
+  const leaveTypeMap: Record<string, number> = {};
+  pendingLeaves.forEach(l => {
+    const type = (l.leave_type as string)?.replace(/_/g, ' ') ?? 'Other';
+    leaveTypeMap[type] = (leaveTypeMap[type] || 0) + 1;
+  });
+  const leaveTypeData = Object.entries(leaveTypeMap).map(([name, count]) => ({ name, count }));
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -196,101 +208,136 @@ export function HRDashboard() {
         </div>
       </div>
 
-      {/* Charts row */}
+      {/* Charts row: workforce donut + staff breakdown bar */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Employee status donut */}
         <Card>
           <CardHeader><CardTitle>Workforce Status</CardTitle></CardHeader>
           <CardContent>
             {stats.totalEmployees > 0 ? (
-              <div className="flex items-center gap-6">
-                <div className="relative h-44 w-44 shrink-0">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative h-52 w-52">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={empChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
-                        {empChartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
+                      <Pie data={empChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={96} dataKey="value" stroke="transparent" paddingAngle={2}>
+                        {empChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(v, n) => [v, n]} />
+                      <Tooltip formatter={(v, n) => [`${v} employees`, n]} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-heading">{stats.totalEmployees}</span>
+                    <span className="text-3xl font-bold text-heading">{stats.totalEmployees}</span>
                     <span className="text-xs text-muted">total</span>
                   </div>
                 </div>
-                <div className="space-y-3 flex-1">
+                <div className="w-full grid grid-cols-2 gap-2">
                   {empChartData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span className="text-sm text-body">{d.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.totalEmployees) * 100}%`, background: d.color }} />
-                        </div>
-                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                    <div key={d.name} className="flex items-center gap-2 p-2 rounded-lg bg-hover">
+                      <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                      <div>
+                        <p className="text-xs text-muted">{d.name}</p>
+                        <p className="text-sm font-bold text-heading">{d.value}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="text-muted text-center py-10">No employee data.</p>
+              <p className="text-muted text-center py-16">No employee data.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Compliance donut */}
+        <Card>
+          <CardHeader><CardTitle>Staff by Status</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={staffBreakdown} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#94a3b8' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="count" name="Employees" radius={[4, 4, 0, 0]}>
+                    {staffBreakdown.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {staffBreakdown.map((d) => (
+                <div key={d.name} className="text-center p-3 rounded-lg bg-hover">
+                  <p className="text-2xl font-bold" style={{ color: d.fill }}>{d.count}</p>
+                  <p className="text-xs text-muted mt-0.5">{d.name}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Compliance donut + leave types bar */}
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Document Compliance</CardTitle></CardHeader>
           <CardContent>
             {stats.totalEmployees > 0 ? (
-              <div className="flex items-center gap-6">
-                <div className="relative h-44 w-44 shrink-0">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative h-52 w-52">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={complianceChartData} cx="50%" cy="50%" innerRadius={52} outerRadius={80} dataKey="value" strokeWidth={2} stroke="transparent">
-                        {complianceChartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
+                      <Pie data={complianceChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={96} dataKey="value" stroke="transparent" paddingAngle={2}>
+                        {complianceChartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(v, n) => [v, n]} />
+                      <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-heading">
-                      {stats.totalEmployees > 0 ? Math.round(((stats.totalEmployees - stats.nonCompliant) / stats.totalEmployees) * 100) : 0}%
+                    <span className="text-3xl font-bold text-heading">
+                      {Math.round(((stats.totalEmployees - stats.nonCompliant) / stats.totalEmployees) * 100)}%
                     </span>
                     <span className="text-xs text-muted">compliant</span>
                   </div>
                 </div>
-                <div className="space-y-3 flex-1">
+                <div className="w-full grid grid-cols-2 gap-2">
                   {complianceChartData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span className="text-sm text-body">{d.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 rounded-full bg-border w-20 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${(d.value / stats.totalEmployees) * 100}%`, background: d.color }} />
-                        </div>
-                        <span className="text-sm font-medium text-heading w-6 text-right">{d.value}</span>
+                    <div key={d.name} className="flex items-center gap-2 p-2 rounded-lg bg-hover">
+                      <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                      <div>
+                        <p className="text-xs text-muted">{d.name}</p>
+                        <p className="text-sm font-bold text-heading">{d.value}</p>
                       </div>
                     </div>
                   ))}
-                  {stats.expiringDocuments > 0 && (
-                    <div className="mt-2 pt-2 border-t border-border">
-                      <p className="text-xs text-warning">⚠ {stats.expiringDocuments} document(s) expiring within 30 days</p>
-                    </div>
-                  )}
                 </div>
+                {stats.expiringDocuments > 0 && (
+                  <p className="text-xs text-warning w-full">⚠ {stats.expiringDocuments} doc(s) expiring within 30 days</p>
+                )}
               </div>
             ) : (
-              <p className="text-muted text-center py-10">No compliance data.</p>
+              <p className="text-muted text-center py-16">No compliance data.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Leave Requests by Type</CardTitle></CardHeader>
+          <CardContent>
+            {leaveTypeData.length > 0 ? (
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={leaveTypeData} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} width={90} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Requests" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-52 flex items-center justify-center">
+                <p className="text-muted">No pending leave requests.</p>
+              </div>
             )}
           </CardContent>
         </Card>
