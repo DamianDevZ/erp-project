@@ -24,6 +24,13 @@ interface InvoiceDocumentProps {
       city?: string | null;
       country?: string | null;
     } | null;
+    client?: { 
+      name: string;
+      vat_id?: string | null;
+      address?: string | null;
+      city?: string | null;
+      country?: string | null;
+    } | null;
   };
   organization: {
     name: string;
