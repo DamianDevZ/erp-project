@@ -73,12 +73,11 @@ export function FinanceDashboard() {
         invoicesQuery.limit(20),
         supabase
           .from('orders')
-          .select('id, cod_amount, status, created_at')
-          .gte('created_at', thirtyDaysAgo)
-          .gt('cod_amount', 0),
+          .select('id, total_revenue, net_revenue, status, created_at')
+          .gte('created_at', thirtyDaysAgo),
         supabase
           .from('payroll_batches')
-          .select('id, period_start, period_end, status, total_gross, total_net')
+          .select('id, period_start, period_end, status, total_gross_pay, total_net_pay, total_employees')
           .order('created_at', { ascending: false })
           .limit(5),
       ]);
@@ -95,19 +94,20 @@ export function FinanceDashboard() {
         .reduce((sum, i) => sum + (i.total || 0), 0);
       const pendingInvoiceAmount = pendingInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
 
+      // Order revenue (30 days)
       const codCollected = orders
         .filter(o => o.status === 'completed')
-        .reduce((sum, o) => sum + (o.cod_amount || 0), 0);
+        .reduce((sum: number, o: any) => sum + (o.total_revenue || 0), 0);
       const codPending = orders
-        .filter(o => o.status !== 'completed' && o.status !== 'cancelled')
-        .reduce((sum, o) => sum + (o.cod_amount || 0), 0);
+        .filter(o => o.status === 'pending')
+        .reduce((sum: number, o: any) => sum + (o.total_revenue || 0), 0);
 
       const payrollPending = payroll.filter(p => p.status === 'pending' || p.status === 'processing').length;
 
       // Cost calculations
       const totalPayrollCost = payroll
         .filter(p => p.status === 'completed')
-        .reduce((sum, p) => sum + (p.total_net || 0), 0);
+        .reduce((sum, p) => sum + (p.total_net_pay || 0), 0);
       const grossProfit = totalRevenue - totalPayrollCost;
 
       setStats({
@@ -162,8 +162,8 @@ export function FinanceDashboard() {
     { name: 'Gross Profit', value: stats.grossProfit },
   ];
 
-  const codBarData = [
-    { name: 'Collected', value: stats.codCollected, fill: '#22c55e' },
+  const orderRevenueBarData = [
+    { name: 'Completed', value: stats.codCollected, fill: '#22c55e' },
     { name: 'Pending', value: stats.codPending, fill: '#f59e0b' },
   ];
 
@@ -281,19 +281,19 @@ export function FinanceDashboard() {
         </Card>
       </div>
 
-      {/* COD Collections */}
+      {/* Order Revenue (30 days) */}
       <Card>
-        <CardHeader><CardTitle>COD Collections</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Order Revenue — Last 30 Days</CardTitle></CardHeader>
         <CardContent>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={codBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+              <BarChart data={orderRevenueBarData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#94a3b8' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`} />
                 <Tooltip formatter={(v) => [formatCurrency(Number(v)), '']} />
-                <Bar dataKey="value" name="Amount (BHD)" radius={[4, 4, 0, 0]} maxBarSize={120}>
-                  {codBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                <Bar dataKey="value" name="Revenue (BHD)" radius={[4, 4, 0, 0]} maxBarSize={120}>
+                  {orderRevenueBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -301,11 +301,11 @@ export function FinanceDashboard() {
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-hover text-center">
               <p className="text-xl font-bold text-success">{formatCurrency(stats.codCollected)}</p>
-              <p className="text-xs text-muted mt-0.5">Collected (30 days)</p>
+              <p className="text-xs text-muted mt-0.5">Completed Orders Revenue</p>
             </div>
             <div className="p-3 rounded-lg bg-hover text-center">
               <p className="text-xl font-bold text-warning">{formatCurrency(stats.codPending)}</p>
-              <p className="text-xs text-muted mt-0.5">Pending Remittance</p>
+              <p className="text-xs text-muted mt-0.5">Pending Orders Revenue</p>
             </div>
           </div>
         </CardContent>
@@ -358,10 +358,10 @@ export function FinanceDashboard() {
                       <p className="font-medium text-heading text-sm">
                         {new Date(batch.period_start).toLocaleDateString('en-GB')} – {new Date(batch.period_end).toLocaleDateString('en-GB')}
                       </p>
-                      <p className="text-xs text-muted">Gross: {formatCurrency(batch.total_gross || 0)}</p>
+                      <p className="text-xs text-muted">Gross: {formatCurrency(batch.total_gross_pay || 0)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-heading text-sm">{formatCurrency(batch.total_net || 0)}</p>
+                      <p className="font-medium text-heading text-sm">{formatCurrency(batch.total_net_pay || 0)}</p>
                       <Badge variant={batch.status === 'completed' ? 'success' : batch.status === 'processing' ? 'default' : 'warning'}>
                         {batch.status}
                       </Badge>

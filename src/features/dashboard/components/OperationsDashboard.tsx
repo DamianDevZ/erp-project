@@ -72,7 +72,7 @@ export function OperationsDashboard() {
 
       let ordersQuery = supabase
         .from('orders')
-        .select('id, external_order_id, status, created_at, order_value, cod_amount, cod_status, client:clients(name), employee:employees(full_name)')
+        .select('id, external_order_id, status, created_at, order_value, total_revenue, net_revenue, client:clients(name), employee:employees(full_name)')
         .gte('created_at', `${today}T00:00:00`)
         .order('created_at', { ascending: false });
 
@@ -136,11 +136,11 @@ export function OperationsDashboard() {
       const idleVehicles = vehicles.filter(v => v.vehicle_status === 'available').length;
       const maintenanceVehicles = vehicles.filter(v => v.vehicle_status === 'maintenance').length;
 
-      // COD tracking
-      const openCods = orders.filter(o => o.cod_amount > 0 && o.cod_status !== 'remitted' && o.cod_status !== 'cleared').length;
+      // Pending order revenue (stand-in for COD outstanding)
+      const openCods = orders.filter(o => o.status === 'pending').length;
       const openCodAmount = orders
-        .filter(o => o.cod_amount > 0 && o.cod_status !== 'remitted' && o.cod_status !== 'cleared')
-        .reduce((sum: number, o: any) => sum + (o.cod_amount || 0), 0);
+        .filter(o => o.status === 'pending')
+        .reduce((sum: number, o: any) => sum + (o.total_revenue || o.order_value || 0), 0);
 
       // Late logins: check_in > shift start + 15 minutes
       const lateLogins = attendanceData.filter((a: any) => {
@@ -276,7 +276,7 @@ export function OperationsDashboard() {
         <KpiCard label="Orders Today" value={stats.todayOrders} sub="deliveries processed" color="primary" />
         <KpiCard label="Completion Rate" value={`${stats.completionRate}%`} sub={`${stats.completedOrders} of ${stats.todayOrders} completed`} color={stats.completionRate >= 80 ? 'success' : stats.completionRate >= 60 ? 'warning' : 'error'} />
         <KpiCard label="Active Riders" value={stats.activeRiders} sub="currently on duty" color="success" />
-        <KpiCard label="COD Outstanding" value={`${stats.openCodAmount.toFixed(3)} BHD`} sub={`${stats.openCods} unreturned`} color={stats.openCods > 0 ? 'error' : 'success'} />
+        <KpiCard label="Pending Orders" value={`${stats.openCodAmount.toFixed(3)} BHD`} sub={`${stats.openCods} pending`} color={stats.openCods > 0 ? 'error' : 'success'} />
       </div>
 
       {/* Charts row: order status donut + orders by platform bar */}

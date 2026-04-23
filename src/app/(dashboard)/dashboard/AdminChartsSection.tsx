@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   AreaChart,
   Area,
@@ -21,6 +22,7 @@ import {
   useOrdersTrend,
 } from '@/features/analytics/queries';
 import { useOptionalClientContext } from '@/contexts';
+import { createClient } from '@/lib/supabase/client';
 
 /**
  * Visual charts section for the Admin (main) dashboard.
@@ -33,6 +35,51 @@ export function AdminChartsSection() {
   const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics(clientIds);
   const { data: platforms, isLoading: platformsLoading } = usePlatformPerformance(undefined, undefined, clientIds);
   const { data: ordersTrend, isLoading: trendLoading } = useOrdersTrend(14, clientIds);
+
+  // Finance summary from invoices
+  const [financeStats, setFinanceStats] = useState({
+    paidRevenue: 0,
+    pendingAmount: 0,
+    overdueAmount: 0,
+    paidCount: 0,
+    pendingCount: 0,
+    overdueCount: 0,
+    payrollCost: 0,
+  });
+  const [financeLoading, setFinanceLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchFinance() {
+      const supabase = createClient();
+      const [invoicesRes, payrollRes] = await Promise.all([
+        supabase.from('invoices').select('total, status'),
+        supabase.from('payroll_batches').select('total_net_pay, status'),
+      ]);
+      const invoices = invoicesRes.data ?? [];
+      const payroll = payrollRes.data ?? [];
+
+      const paid = invoices.filter(i => i.status === 'paid');
+      const pending = invoices.filter(i => i.status === 'sent' || i.status === 'draft');
+      const overdue = invoices.filter(i => i.status === 'overdue');
+      const sum = (arr: { total: number | null }[]) => arr.reduce((s, i) => s + (i.total ?? 0), 0);
+
+      const payrollCost = payroll
+        .filter(p => p.status === 'paid' || p.status === 'approved')
+        .reduce((s, p) => s + (p.total_net_pay ?? 0), 0);
+
+      setFinanceStats({
+        paidRevenue: sum(paid),
+        pendingAmount: sum(pending),
+        overdueAmount: sum(overdue),
+        paidCount: paid.length,
+        pendingCount: pending.length,
+        overdueCount: overdue.length,
+        payrollCost,
+      });
+      setFinanceLoading(false);
+    }
+    fetchFinance();
+  }, []);
 
   const isLoading = metricsLoading || platformsLoading || trendLoading;
 
@@ -218,6 +265,97 @@ export function AdminChartsSection() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Finance Overview */}
+      {!financeLoading && (
+        <Card>
+          <CardHeader><CardTitle>Finance Overview</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Invoice Status donut */}
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-sm font-semibold text-muted self-start">Invoice Status</p>
+                {(() => {
+                  const invoiceData = [
+                    { name: 'Paid', value: financeStats.paidCount, color: '#22c55e' },
+                    { name: 'Pending', value: financeStats.pendingCount, color: '#3b82f6' },
+                    { name: 'Overdue', value: financeStats.overdueCount, color: '#ef4444' },
+                  ].filter(d => d.value > 0);
+                  const total = financeStats.paidCount + financeStats.pendingCount + financeStats.overdueCount;
+                  return invoiceData.length > 0 ? (
+                    <>
+                      <div className="relative h-52 w-52">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={invoiceData} cx="50%" cy="50%" innerRadius={60} outerRadius={96} dataKey="value" stroke="transparent" paddingAngle={2}>
+                              {invoiceData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-3xl font-bold text-heading">{total}</span>
+                          <span className="text-xs text-muted">invoices</span>
+                        </div>
+                      </div>
+                      <div className="w-full grid grid-cols-2 gap-2">
+                        {invoiceData.map(d => (
+                          <div key={d.name} className="flex items-center gap-2 p-3 rounded-lg bg-hover">
+                            <div className="h-3 w-3 rounded-full shrink-0" style={{ background: d.color }} />
+                            <div>
+                              <p className="text-xs text-muted">{d.name}</p>
+                              <p className="text-sm font-bold text-heading">{d.value}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : <p className="text-muted text-sm">No invoices yet.</p>;
+                })()}
+              </div>
+
+              {/* Revenue vs Payroll bar */}
+              <div>
+                <p className="text-sm font-semibold text-muted mb-3">Revenue vs Payroll Cost</p>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        { name: 'Paid Revenue', value: financeStats.paidRevenue, fill: '#22c55e' },
+                        { name: 'Pending', value: financeStats.pendingAmount, fill: '#3b82f6' },
+                        { name: 'Payroll Cost', value: financeStats.payrollCost, fill: '#ef4444' },
+                      ]}
+                      margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={v => `${(v/1000).toFixed(1)}k`} />
+                      <Tooltip formatter={v => [`${Number(v).toFixed(3)} BHD`, '']} />
+                      <Bar dataKey="value" radius={[4,4,0,0]} maxBarSize={72}>
+                        {[{ fill:'#22c55e' },{ fill:'#3b82f6' },{ fill:'#ef4444' }].map((e,i) => <Cell key={i} fill={e.fill} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-hover">
+                    <p className="text-xs font-bold text-success">{financeStats.paidRevenue.toFixed(3)}</p>
+                    <p className="text-xs text-muted">Paid (BHD)</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-hover">
+                    <p className="text-xs font-bold text-primary">{financeStats.pendingAmount.toFixed(3)}</p>
+                    <p className="text-xs text-muted">Pending</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-hover">
+                    <p className="text-xs font-bold text-error">{financeStats.payrollCost.toFixed(3)}</p>
+                    <p className="text-xs text-muted">Payroll</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
